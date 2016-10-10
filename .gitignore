@@ -1,6 +1,7 @@
 *.db
 *.opendb
-*/Debug/*
+FluidSim2D/Debug/*
+FluidSim2D/FluidSim2D/Debug/*
 
 # Compiled Object files
 *.slo
