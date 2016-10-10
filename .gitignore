@@ -1,3 +1,7 @@
+*.db
+*.opendb
+*/Debug/*
+
 # Compiled Object files
 *.slo
 *.lo
