@@ -16,19 +16,29 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="FragShade.glsl" />
-    <None Include="VertShade.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LoadProgram.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SpringMassSim.cpp">
+    <ClCompile Include="FluidSim2dMain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FluidSolver2d.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FluidRenderer2d.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LoadProgram.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FluidSolver2d.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FluidRenderer2d.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
