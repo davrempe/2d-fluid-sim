@@ -149,11 +149,13 @@
     <ClCompile Include="FluidSim2dMain.cpp" />
     <ClCompile Include="FluidSolver2d.cpp" />
     <ClCompile Include="LoadProgram.cpp" />
+    <ClCompile Include="SimUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FluidRenderer2d.h" />
     <ClInclude Include="FluidSolver2d.h" />
     <ClInclude Include="LoadProgram.h" />
+    <ClInclude Include="SimUtil.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
