@@ -7,6 +7,8 @@
 //----------------------------------------------------------------------
 
 #include <string>
+#include <fstream>
+#include <iostream>
 
 #include "FluidSolver2d.h"
 #include "FluidRenderer2d.h"
@@ -26,7 +28,8 @@ const bool RUN_RENDERING = true;
 //----------------------------------------------------------------------
 
 // resolution of the grid to use (width, height)
-const Vec2 GRID_RES = { 100, 50 };
+const int GRID_WIDTH = 100;
+const int GRID_HEIGHT = 50;
 // grid cell width (in meters)
 const float GRID_CELL_WIDTH = 0.005f;
 // simulation time step (in seconds)
@@ -47,25 +50,18 @@ const std::string PARTICLE_DATA_FILE_OUT = "particle_data.txt";
 // Global Variables
 //----------------------------------------------------------------------
 
-/*
-Builds initial grid of dimensions (width, height) that contains the initial
-geometry for the system to simulate. It reads the initial geometry from
-the specified input file parameter.
-Args:
-	gridDim - grid dimensions (width, height)
-	grid - the 2D array to put the initial grid in
-*/
-void buildInitialGrid(Vec2 gridDim, int* grid) {
-
-
-}
-
 int main() {
-	// build initial grid
+	if (RUN_SIM) {
+		FluidSolver2D *solver = new FluidSolver2D(GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH, TIME_STEP);
+		
 
-	// create solver
+		// cleanup
+		delete solver;
+	}
 
-	// init solver
+	if (RUN_RENDERING) {
+
+	}
 
 
 	return 0;
