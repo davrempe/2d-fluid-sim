@@ -53,7 +53,7 @@ const std::string PARTICLE_DATA_FILE_OUT = "particle_data.txt";
 int main() {
 	if (RUN_SIM) {
 		FluidSolver2D *solver = new FluidSolver2D(GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH, TIME_STEP);
-		
+		solver->init(INITIAL_GEOMETRY_FILE_IN);
 
 		// cleanup
 		delete solver;

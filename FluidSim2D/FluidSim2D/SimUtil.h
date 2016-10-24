@@ -19,6 +19,11 @@ namespace SimUtil {
 		Vec2(float x, float y) : x(x), y(y) {}
 	};
 
+	struct Vec3 {
+		float x, y, z;
+		Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
+	};
+
 	// particle struct
 
 	//----------------------------------------------------------------------
@@ -28,31 +33,45 @@ namespace SimUtil {
 	/*
 	Initializes a 2D matrix.
 	Args:
-	x - num rows
-	y - num cols
+	m - num rows
+	n - num cols
+	Returns:
+	T** - the dynamic array
 	*/
-	template <typename T> void initMat2D(int, int, T**);
+	template <typename T> T** initMat2D(int, int);
 	/*
 	Deletes a 2D matrix.
 	Args:
-	x - num rows
-	y - num cols
+	m - num rows
+	n - num cols
+	mat - matrix to delete
 	*/
 	template <typename T> void deleteMat2D(int, int, T**);
 	/*
+	Prints the given matrix to stdout.
+	Args:
+	m - num rows
+	n - num cols
+	T** - matrix to print
+	*/
+	template <typename T> void printMat2D(int, int, T**);
+	/*
 	Initializes a 3D matrix.
 	Args:
-	x - num rows
-	y - num cols
-	z - depth
+	m - num rows
+	n - num cols
+	l - depth
+	Returns:
+	T*** - the dynamic array
 	*/
-	template <typename T> void initMat3D(int, int, int, T***);
+	template <typename T> T*** initMat3D(int, int, int);
 	/*
 	Deletes a 3D matrix.
 	Args:
-	x - num rows
-	y - num cols
-	z - depth
+	m - num rows
+	n - num cols
+	l - depth
+	mat - matrix to delete
 	*/
 	template <typename T> void deleteMat3D(int, int, int, T***);
 

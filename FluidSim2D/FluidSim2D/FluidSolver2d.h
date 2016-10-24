@@ -8,7 +8,43 @@ class FluidSolver2D {
 	typedef float** Mat2Df;
 
 private:
-	
+	//----------------------------------------------------------------------
+	// Grid Attributes
+	//----------------------------------------------------------------------
+	// nx
+	int gridWidth;
+	// ny
+	int gridHeight;
+	// distance between each grid cell
+	float dx;
+	// grid of cell labels, size (nx, ny)
+	Mat2Di label;
+	// grid of pressures, size (nx, ny)
+	Mat2Df p;
+	// grid of vel x component, size (nx+1, ny)
+	Mat2Df u;
+	// grid of vel y component, size (nx, ny+1)
+	Mat2Df v;
+
+	//----------------------------------------------------------------------
+	// Simulation Attributes
+	//----------------------------------------------------------------------
+	float dt;
+
+	//----------------------------------------------------------------------
+	// Functions
+	//----------------------------------------------------------------------
+
+	/*
+	Builds initial grid of dimensions (width, height) that contains the initial
+	geometry for the system to simulate. It reads the initial geometry from
+	the specified input file parameter.
+	Args:
+	width/height - grid dimensions
+	geomFile - the file containing the geometry
+	grid - the 2D array to put the initial grid in
+	*/
+	void readInGeom(int, int, std::string, Mat2Di);
 
 
 public:
@@ -23,7 +59,13 @@ public:
 	FluidSolver2D(int, int, float, float);
 	~FluidSolver2D();
 
-	void init(std::string initialGeometryFile);
+	/*
+	Initializes the solver by reading in and constructing initial
+	grid based on the given initial geometry file.
+	Args:
+	initialGemoetryFile - name of the .txt file containing initial geometry
+	*/
+	void init(std::string);
 
 };
 
