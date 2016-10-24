@@ -24,7 +24,17 @@ namespace SimUtil {
 		Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
 	};
 
-	// particle struct
+	struct Particle2D {
+		Vec2 pos;
+		Vec2 vel;
+		Particle2D(Vec2 pos, Vec2 vel) : pos(pos), vel(vel) {}
+	};
+
+	struct Particle3D {
+		Vec3 pos;
+		Vec3 vel;
+		Particle3D(Vec3 pos, Vec3 vel) : pos(pos), vel(vel) {}
+	};
 
 	//----------------------------------------------------------------------
 	// Functions

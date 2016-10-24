@@ -18,6 +18,8 @@ FluidSolver2D::~FluidSolver2D(){
 	SimUtil::deleteMat2D<float>(gridHeight, gridWidth, p);
 	SimUtil::deleteMat2D<float>(gridHeight, gridWidth + 1, u);
 	SimUtil::deleteMat2D<float>(gridHeight + 1, gridWidth, v);
+
+	delete particles;
 }
 
 void FluidSolver2D::init(std::string initialGeometryFile){
@@ -31,6 +33,9 @@ void FluidSolver2D::init(std::string initialGeometryFile){
 	readInGeom(gridWidth, gridHeight, initialGeometryFile, label);
 	//SimUtil::printMat2D<int>(gridHeight, gridWidth, label);
 
+	// seed particles using label grid
+	particles = new std::vector<SimUtil::Particle2D>();
+	seedParticles(PARTICLES_PER_CELL, particles);
 
 }
 
@@ -59,6 +64,11 @@ void FluidSolver2D::readInGeom(int width, int height, std::string geomFileName, 
 		}
 		geomFile.close();
 	}
+}
+
+void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<SimUtil::Particle2D> *particleList) {
+	// TODO
+	
 }
 
 

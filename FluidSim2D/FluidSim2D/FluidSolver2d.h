@@ -2,6 +2,7 @@
 #define FLUID_SOLVER_2D_H_
 
 #include <string>
+#include <vector>
 
 class FluidSolver2D {
 	typedef int** Mat2Di;
@@ -11,6 +12,7 @@ private:
 	//----------------------------------------------------------------------
 	// Grid Attributes
 	//----------------------------------------------------------------------
+
 	// nx
 	int gridWidth;
 	// ny
@@ -29,7 +31,16 @@ private:
 	//----------------------------------------------------------------------
 	// Simulation Attributes
 	//----------------------------------------------------------------------
+
+	// number of particles to seed in each cell at start of sim
+	const int PARTICLES_PER_CELL = 8;
+	// simulation time step
 	float dt;
+
+	//----------------------------------------------------------------------
+	// Particle-related Members
+	//----------------------------------------------------------------------
+	std::vector<SimUtil::Particle2D> *particles;
 
 	//----------------------------------------------------------------------
 	// Functions
@@ -45,6 +56,14 @@ private:
 	grid - the 2D array to put the initial grid in
 	*/
 	void readInGeom(int, int, std::string, Mat2Di);
+	/*
+	Seeds the initial simulation particles. Particles are created for each fluid-labeled
+	cell in a random-jittered pattern. 
+	Args:
+	particlesPerCell - number of particles to seed in each fluid cell
+	particleList - list to place the new particles in
+	*/
+	void seedParticles(int, std::vector<SimUtil::Particle2D>*);
 
 
 public:
