@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "SimUtil.h"
+
 class FluidSolver2D {
 	typedef int** Mat2Di;
 	typedef float** Mat2Df;
@@ -14,57 +16,42 @@ private:
 	//----------------------------------------------------------------------
 
 	// nx
-	int gridWidth;
+	int m_gridWidth;
 	// ny
-	int gridHeight;
+	int m_gridHeight;
 	// distance between each grid cell
-	float dx;
+	float m_dx;
 	// grid of cell labels, size (nx, ny)
-	Mat2Di label;
+	Mat2Di m_label;
 	// grid of pressures, size (nx, ny)
-	Mat2Df p;
+	Mat2Df m_p;
 	// grid of vel x component, size (nx+1, ny)
-	Mat2Df u;
+	Mat2Df m_u;
 	// grid of vel y component, size (nx, ny+1)
-	Mat2Df v;
+	Mat2Df m_v;
 
 	//----------------------------------------------------------------------
 	// Simulation Attributes
 	//----------------------------------------------------------------------
 
 	// number of particles to seed in each cell at start of sim
-	const int PARTICLES_PER_CELL = 8;
+	const int PARTICLES_PER_CELL = 4;
 	// simulation time step
-	float dt;
+	float m_dt;
 
 	//----------------------------------------------------------------------
 	// Particle-related Members
 	//----------------------------------------------------------------------
-	std::vector<SimUtil::Particle2D> *particles;
+	std::vector<SimUtil::Particle2D> *m_particles;
 
 	//----------------------------------------------------------------------
 	// Functions
 	//----------------------------------------------------------------------
 
-	/*
-	Builds initial grid of dimensions (width, height) that contains the initial
-	geometry for the system to simulate. It reads the initial geometry from
-	the specified input file parameter.
-	Args:
-	width/height - grid dimensions
-	geomFile - the file containing the geometry
-	grid - the 2D array to put the initial grid in
-	*/
+	
 	void readInGeom(int, int, std::string, Mat2Di);
-	/*
-	Seeds the initial simulation particles. Particles are created for each fluid-labeled
-	cell in a random-jittered pattern. 
-	Args:
-	particlesPerCell - number of particles to seed in each fluid cell
-	particleList - list to place the new particles in
-	*/
 	void seedParticles(int, std::vector<SimUtil::Particle2D>*);
-
+	SimUtil::Vec2 getCellLocation(int, int);
 
 public:
 	/*

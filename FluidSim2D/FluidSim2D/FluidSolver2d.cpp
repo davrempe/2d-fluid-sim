@@ -1,44 +1,58 @@
 #include <fstream>
 #include <iostream>
+#include <exception>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
 
 #include "FluidSolver2d.h"
 #include "SimUtil.h"
 
 
 FluidSolver2D::FluidSolver2D(int width, int height, float dx, float dt){
-	this->gridWidth = width;
-	this->gridHeight = height;
-	this->dx = dx;
-	this->dt = dt;
+	m_gridWidth = width;
+	m_gridHeight = height;
+	m_dx = dx;
+	m_dt = dt;
 }
 
 FluidSolver2D::~FluidSolver2D(){
 	// clean up grid
-	SimUtil::deleteMat2D<int>(gridHeight, gridWidth, label);
-	SimUtil::deleteMat2D<float>(gridHeight, gridWidth, p);
-	SimUtil::deleteMat2D<float>(gridHeight, gridWidth + 1, u);
-	SimUtil::deleteMat2D<float>(gridHeight + 1, gridWidth, v);
+	SimUtil::deleteMat2D<int>(m_gridHeight, m_gridWidth, m_label);
+	SimUtil::deleteMat2D<float>(m_gridHeight, m_gridWidth, m_p);
+	SimUtil::deleteMat2D<float>(m_gridHeight, m_gridWidth + 1, m_u);
+	SimUtil::deleteMat2D<float>(m_gridHeight + 1, m_gridWidth, m_v);
 
-	delete particles;
+	delete m_particles;
 }
+
 
 void FluidSolver2D::init(std::string initialGeometryFile){
 	// set up the grid for simulation by initializing arrays
-	label = SimUtil::initMat2D<int>(gridHeight, gridWidth);
-	p = SimUtil::initMat2D<float>(gridHeight, gridWidth);
-	u = SimUtil::initMat2D<float>(gridHeight, gridWidth + 1);
-	v = SimUtil::initMat2D<float>(gridHeight + 1, gridWidth);
+	m_label = SimUtil::initMat2D<int>(m_gridHeight, m_gridWidth);
+	m_p = SimUtil::initMat2D<float>(m_gridHeight, m_gridWidth);
+	m_u = SimUtil::initMat2D<float>(m_gridHeight, m_gridWidth + 1);
+	m_v = SimUtil::initMat2D<float>(m_gridHeight + 1, m_gridWidth);
 
 	// read in initial geometry to populate label grid
-	readInGeom(gridWidth, gridHeight, initialGeometryFile, label);
-	//SimUtil::printMat2D<int>(gridHeight, gridWidth, label);
+	readInGeom(m_gridWidth, m_gridHeight, initialGeometryFile, m_label);
+	//SimUtil::printMat2D<int>(m_gridHeight, m_gridWidth, m_label);
 
 	// seed particles using label grid
-	particles = new std::vector<SimUtil::Particle2D>();
-	seedParticles(PARTICLES_PER_CELL, particles);
+	m_particles = new std::vector<SimUtil::Particle2D>();
+	seedParticles(PARTICLES_PER_CELL, m_particles);
 
 }
 
+/*
+Builds initial grid of dimensions (width, height) that contains the initial
+geometry for the system to simulate. It reads the initial geometry from
+the specified input file parameter.
+Args:
+width/height - grid dimensions
+geomFile - the file containing the geometry
+grid - the 2D array to put the initial grid in
+*/
 void FluidSolver2D::readInGeom(int width, int height, std::string geomFileName, Mat2Di grid) {
 	// open the geometry file
 	std::ifstream geomFile(geomFileName);
@@ -66,9 +80,54 @@ void FluidSolver2D::readInGeom(int width, int height, std::string geomFileName, 
 	}
 }
 
+/*
+Seeds the initial simulation particles. Particles are created for each fluid-labeled
+cell in a random-jittered subgrid pattern.
+Args:
+particlesPerCell - number of particles to seed in each fluid cell.
+particleList - list to place the new particles in
+*/
 void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<SimUtil::Particle2D> *particleList) {
-	// TODO
-	
+	// set random seed
+	srand(time(NULL));
+	// go through all cells marked fluid
+	for (int i = 0; i < m_gridHeight; i++) {
+		for (int j = 0; j < m_gridWidth; j++) {
+			if (m_label[i][j] == SimUtil::FLUID) {
+				// seed randomly in 2x2 subgrid of the cell
+				SimUtil::Vec2 cellCenter = getCellLocation(i, j);
+				SimUtil::Vec2 subCenters[] = {
+					SimUtil::Vec2(cellCenter.x - 0.25f*m_dx, cellCenter.y + 0.25f*m_dx), // top left
+					SimUtil::Vec2(cellCenter.x + 0.25f*m_dx, cellCenter.y + 0.25f*m_dx), // top right
+					SimUtil::Vec2(cellCenter.x + 0.25f*m_dx, cellCenter.y - 0.25f*m_dx), // bottom right
+					SimUtil::Vec2(cellCenter.x - 0.25f*m_dx, cellCenter.y - 0.25f*m_dx) // bottom left
+				};
+				// cycle through subgrid to place all particles
+				for (int k = 0; k < particlesPerCell; k++) {
+					// randomly jitter from subgrid center
+					// give a random factor from [-0.25, 0.25] multiplied by dx
+					float jitterX = ((float)((rand() % 51) - 25) / 100.0f) * m_dx;
+					float jitterY = ((float)((rand() % 51) - 25) / 100.0f) * m_dx;
+					SimUtil::Vec2 pos(subCenters[i % 4].x + jitterX, subCenters[i % 4].y + jitterY);
+					SimUtil::Vec2 vel(0.0f, 0.0f);
+					particleList->push_back(SimUtil::Particle2D(pos, vel));
+				}
+			}
+		}
+	}
+}
+
+/*
+Finds the physical center location of the cell with index [i][j] (ith row, jth col)
+based on dx
+Args:
+i - row index of cell
+j - col index of cell
+Returns:
+Vec2 (x, y) containing physical location from bottom left corner of grid.
+*/
+SimUtil::Vec2 FluidSolver2D::getCellLocation(int i, int j) {
+	return SimUtil::Vec2(j*m_dx + 0.5f*m_dx, i*m_dx + 0.5f*m_dx);
 }
 
 

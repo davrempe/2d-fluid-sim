@@ -55,6 +55,8 @@ int main() {
 		FluidSolver2D *solver = new FluidSolver2D(GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH, TIME_STEP);
 		solver->init(INITIAL_GEOMETRY_FILE_IN);
 
+		// step for length of sim
+
 		// cleanup
 		delete solver;
 	}
