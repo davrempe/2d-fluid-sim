@@ -3,8 +3,10 @@
 
 #include <string>
 #include <vector>
+#include <fstream>
 
 #include "SimUtil.h"
+
 
 class FluidSolver2D {
 	typedef int** Mat2Di;
@@ -42,13 +44,12 @@ private:
 	//----------------------------------------------------------------------
 	// Particle-related Members
 	//----------------------------------------------------------------------
-	std::vector<SimUtil::Particle2D> *m_particles;
+	std::vector<SimUtil::Particle2D > *m_particles;
 
 	//----------------------------------------------------------------------
 	// Functions
 	//----------------------------------------------------------------------
-
-	
+		
 	void readInGeom(int, int, std::string, Mat2Di);
 	void seedParticles(int, std::vector<SimUtil::Particle2D>*);
 	SimUtil::Vec2 getCellLocation(int, int);
@@ -67,12 +68,26 @@ public:
 
 	/*
 	Initializes the solver by reading in and constructing initial
-	grid based on the given initial geometry file.
+	grid based on the given initial geometry file. The solver will save particle
+	data at each time step to the given output file.
 	Args:
 	initialGemoetryFile - name of the .txt file containing initial geometry
 	*/
 	void init(std::string);
 
+	/*
+	Steps the simulation forward dt.
+	*/
+	void step();
+
+	/*
+	Saves all particles currently in the simulation using the given file stream
+	Outputs in csv format where each particle position is an entry in the row:
+	"0.234 0.154, ... , \n"
+	Args:
+	particleOut - pointer to file stream to use for output
+	*/
+	void saveParticleData(std::ofstream*);
 };
 
 #endif //FLUID_SOLVER_2D_H_

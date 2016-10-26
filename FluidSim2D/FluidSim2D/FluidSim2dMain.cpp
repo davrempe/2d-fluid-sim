@@ -34,8 +34,6 @@ const int GRID_HEIGHT = 50;
 const float GRID_CELL_WIDTH = 0.005f;
 // simulation time step (in seconds)
 const float TIME_STEP = 0.04f;
-// the number of frames to simulate
-const int NUM_SIM_FRAMES = 125;
 
 //----------------------------------------------------------------------
 // I/O Parameters
@@ -44,20 +42,46 @@ const int NUM_SIM_FRAMES = 125;
 // input file for initial system state - grid marked solid, fluid, or air
 const std::string INITIAL_GEOMETRY_FILE_IN = "initial_geometry.txt";
 // output file for particle data
-const std::string PARTICLE_DATA_FILE_OUT = "particle_data.txt";
+const std::string PARTICLE_DATA_FILE_OUT = "particle_data.csv";
+// the number of frames to simulate
+const int NUM_SIM_FRAMES = 125;
+// frame rate for render (fps)
+const float FRAME_RATE = 25.0f;
+// time step between outputted frames
+const float FRAME_TIME_STEP = 1.0f / FRAME_RATE;
 
 //----------------------------------------------------------------------
 // Global Variables
 //----------------------------------------------------------------------
 
+
+
 int main() {
 	if (RUN_SIM) {
+		// open and clear output file
+		std::ofstream *particleOut = new std::ofstream(PARTICLE_DATA_FILE_OUT, std::ofstream::trunc);
+
 		FluidSolver2D *solver = new FluidSolver2D(GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH, TIME_STEP);
 		solver->init(INITIAL_GEOMETRY_FILE_IN);
+		
+		// run simulation
+		int framesOut = 0;
+		float t = 0;
+		while (framesOut < NUM_SIM_FRAMES) {
+			// perform sim time step
+			solver->step();
 
-		// step for length of sim
+			t += TIME_STEP;
+			// check if need to output data to render at current time
+			if (t - ((framesOut + 1) * FRAME_TIME_STEP) <= 0.000001f) {
+				solver->saveParticleData(particleOut);
+				framesOut++;
+			}
+		}
 
 		// cleanup
+		particleOut->close();
+		delete particleOut;
 		delete solver;
 	}
 

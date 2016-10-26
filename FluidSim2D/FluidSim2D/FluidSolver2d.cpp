@@ -1,4 +1,3 @@
-#include <fstream>
 #include <iostream>
 #include <exception>
 #include <cmath>
@@ -8,41 +7,72 @@
 #include "FluidSolver2d.h"
 #include "SimUtil.h"
 
+using namespace SimUtil;
+
+//----------------------------------------------------------------------
+// Constructors
+//----------------------------------------------------------------------
 
 FluidSolver2D::FluidSolver2D(int width, int height, float dx, float dt){
 	m_gridWidth = width;
 	m_gridHeight = height;
 	m_dx = dx;
 	m_dt = dt;
+
+	m_particles = new std::vector<Particle2D>();
 }
+
+//----------------------------------------------------------------------
+// Destructor
+//----------------------------------------------------------------------
 
 FluidSolver2D::~FluidSolver2D(){
 	// clean up grid
-	SimUtil::deleteMat2D<int>(m_gridHeight, m_gridWidth, m_label);
-	SimUtil::deleteMat2D<float>(m_gridHeight, m_gridWidth, m_p);
-	SimUtil::deleteMat2D<float>(m_gridHeight, m_gridWidth + 1, m_u);
-	SimUtil::deleteMat2D<float>(m_gridHeight + 1, m_gridWidth, m_v);
+	deleteMat2D<int>(m_gridHeight, m_gridWidth, m_label);
+	deleteMat2D<float>(m_gridHeight, m_gridWidth, m_p);
+	deleteMat2D<float>(m_gridHeight, m_gridWidth + 1, m_u);
+	deleteMat2D<float>(m_gridHeight + 1, m_gridWidth, m_v);
 
 	delete m_particles;
 }
 
+//----------------------------------------------------------------------
+// Public Functions
+//----------------------------------------------------------------------
 
 void FluidSolver2D::init(std::string initialGeometryFile){
 	// set up the grid for simulation by initializing arrays
-	m_label = SimUtil::initMat2D<int>(m_gridHeight, m_gridWidth);
-	m_p = SimUtil::initMat2D<float>(m_gridHeight, m_gridWidth);
-	m_u = SimUtil::initMat2D<float>(m_gridHeight, m_gridWidth + 1);
-	m_v = SimUtil::initMat2D<float>(m_gridHeight + 1, m_gridWidth);
+	m_label = initMat2D<int>(m_gridHeight, m_gridWidth);
+	m_p = initMat2D<float>(m_gridHeight, m_gridWidth);
+	m_u = initMat2D<float>(m_gridHeight, m_gridWidth + 1);
+	m_v = initMat2D<float>(m_gridHeight + 1, m_gridWidth);
 
 	// read in initial geometry to populate label grid
 	readInGeom(m_gridWidth, m_gridHeight, initialGeometryFile, m_label);
-	//SimUtil::printMat2D<int>(m_gridHeight, m_gridWidth, m_label);
+	//printMat2D<int>(m_gridHeight, m_gridWidth, m_label);
 
 	// seed particles using label grid
-	m_particles = new std::vector<SimUtil::Particle2D>();
 	seedParticles(PARTICLES_PER_CELL, m_particles);
+}
+
+void FluidSolver2D::step() {
 
 }
+
+void FluidSolver2D::saveParticleData(std::ofstream *particleOut) {
+	if (particleOut->is_open()) {
+		// print out all particle data on same line, each pos separated by ","
+		size_t numParticles = m_particles->size();
+		for (int i = 0; i < numParticles - 1; i++) {
+			(*particleOut) << m_particles->at(i).pos.x << " " << m_particles->at(i).pos.y << ",";
+		}
+		(*particleOut) << m_particles->at(numParticles - 1).pos.x << " " << m_particles->at(numParticles - 1).pos.y << "\n";
+	}
+}
+
+//----------------------------------------------------------------------
+// Private Functions
+//----------------------------------------------------------------------
 
 /*
 Builds initial grid of dimensions (width, height) that contains the initial
@@ -87,7 +117,7 @@ Args:
 particlesPerCell - number of particles to seed in each fluid cell.
 particleList - list to place the new particles in
 */
-void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<SimUtil::Particle2D> *particleList) {
+void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<Particle2D> *particleList) {
 	// set random seed
 	srand(time(NULL));
 	// go through all cells marked fluid
@@ -95,12 +125,12 @@ void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<SimUtil::Par
 		for (int j = 0; j < m_gridWidth; j++) {
 			if (m_label[i][j] == SimUtil::FLUID) {
 				// seed randomly in 2x2 subgrid of the cell
-				SimUtil::Vec2 cellCenter = getCellLocation(i, j);
-				SimUtil::Vec2 subCenters[] = {
-					SimUtil::Vec2(cellCenter.x - 0.25f*m_dx, cellCenter.y + 0.25f*m_dx), // top left
-					SimUtil::Vec2(cellCenter.x + 0.25f*m_dx, cellCenter.y + 0.25f*m_dx), // top right
-					SimUtil::Vec2(cellCenter.x + 0.25f*m_dx, cellCenter.y - 0.25f*m_dx), // bottom right
-					SimUtil::Vec2(cellCenter.x - 0.25f*m_dx, cellCenter.y - 0.25f*m_dx) // bottom left
+				Vec2 cellCenter = getCellLocation(i, j);
+				Vec2 subCenters[] = {
+					Vec2(cellCenter.x - 0.25f*m_dx, cellCenter.y + 0.25f*m_dx), // top left
+					Vec2(cellCenter.x + 0.25f*m_dx, cellCenter.y + 0.25f*m_dx), // top right
+					Vec2(cellCenter.x + 0.25f*m_dx, cellCenter.y - 0.25f*m_dx), // bottom right
+					Vec2(cellCenter.x - 0.25f*m_dx, cellCenter.y - 0.25f*m_dx) // bottom left
 				};
 				// cycle through subgrid to place all particles
 				for (int k = 0; k < particlesPerCell; k++) {
@@ -108,9 +138,9 @@ void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<SimUtil::Par
 					// give a random factor from [-0.25, 0.25] multiplied by dx
 					float jitterX = ((float)((rand() % 51) - 25) / 100.0f) * m_dx;
 					float jitterY = ((float)((rand() % 51) - 25) / 100.0f) * m_dx;
-					SimUtil::Vec2 pos(subCenters[i % 4].x + jitterX, subCenters[i % 4].y + jitterY);
-					SimUtil::Vec2 vel(0.0f, 0.0f);
-					particleList->push_back(SimUtil::Particle2D(pos, vel));
+					Vec2 pos(subCenters[i % 4].x + jitterX, subCenters[i % 4].y + jitterY);
+					Vec2 vel(0.0f, 0.0f);
+					particleList->push_back(Particle2D(pos, vel));
 				}
 			}
 		}
@@ -126,8 +156,8 @@ j - col index of cell
 Returns:
 Vec2 (x, y) containing physical location from bottom left corner of grid.
 */
-SimUtil::Vec2 FluidSolver2D::getCellLocation(int i, int j) {
-	return SimUtil::Vec2(j*m_dx + 0.5f*m_dx, i*m_dx + 0.5f*m_dx);
+Vec2 FluidSolver2D::getCellLocation(int i, int j) {
+	return Vec2(j*m_dx + 0.5f*m_dx, i*m_dx + 0.5f*m_dx);
 }
 
 
