@@ -9,8 +9,6 @@
 
 
 class FluidSolver2D {
-	typedef int** Mat2Di;
-	typedef float** Mat2Df;
 
 private:
 	//----------------------------------------------------------------------
@@ -24,13 +22,13 @@ private:
 	// distance between each grid cell
 	float m_dx;
 	// grid of cell labels, size (nx, ny)
-	Mat2Di m_label;
+	SimUtil::Mat2Di m_label;
 	// grid of pressures, size (nx, ny)
-	Mat2Df m_p;
+	SimUtil::Mat2Df m_p;
 	// grid of vel x component, size (nx+1, ny)
-	Mat2Df m_u;
+	SimUtil::Mat2Df m_u;
 	// grid of vel y component, size (nx, ny+1)
-	Mat2Df m_v;
+	SimUtil::Mat2Df m_v;
 
 	//----------------------------------------------------------------------
 	// Simulation Attributes
@@ -50,7 +48,6 @@ private:
 	// Functions
 	//----------------------------------------------------------------------
 		
-	void readInGeom(int, int, std::string, Mat2Di);
 	void seedParticles(int, std::vector<SimUtil::Particle2D>*);
 	SimUtil::Vec2 getCellLocation(int, int);
 

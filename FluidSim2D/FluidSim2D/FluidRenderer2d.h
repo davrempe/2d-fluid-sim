@@ -2,28 +2,61 @@
 #define FLUID_RENDERER_2D_H_
 
 #include <gl/glew.h>
+#include <string>
+#include <vector>
+
+#include "SimUtil.h"
 
 class FluidRenderer2D {
 
 	struct VertexData {
-		GLfloat vPos[3];
+		GLfloat vPos[2];
 		GLfloat vColor[3];
 
 		VertexData() {
-			vPos[0] = 0.0;		vPos[1] = 0.0;		vPos[2] = 0.0;
-			vColor[0] = 0.0;		vColor[1] = 0.0;		vColor[2] = 0.0;
+			vPos[0] = 0.0;
+			vPos[1] = 0.0;
+			vColor[0] = 0.0;
+			vColor[1] = 0.0;
+			vColor[2] = 0.0;
 		}
 
-		VertexData(GLfloat vertPos[3], GLfloat vertColor[3]) {
-			vPos[0] = vertPos[0];		vPos[1] = vertPos[1];		vPos[2] = vertPos[2];
-			vColor[0] = vertColor[0];		vColor[1] = vertColor[1];		vColor[2] = vertColor[2];
+		VertexData(GLfloat vertPos[2], GLfloat vertColor[3]) {
+			vPos[0] = vertPos[0];
+			vPos[1] = vertPos[1];
+			vColor[0] = vertColor[0];
+			vColor[1] = vertColor[1];
+			vColor[2] = vertColor[2];
 		}
 	};
 
 private:
-	// array holding particle position data for each frame
+	//----------------------------------------------------------------------
+	// Rendering Parameters
+	//----------------------------------------------------------------------
+
+	// file name of geometry information
+	std::string m_geomFile;
+	// file name of particle data from simulation
+	std::string m_particleFile;
+	// width of simulation grid
+	int m_width;
+	// height of simulation grid
+	int m_height;
+	// grid cell dimensions
+	float m_dx;
+
+	//----------------------------------------------------------------------
+	// Rendering-related members
+	//----------------------------------------------------------------------
+
+	// particle position data for every frame
+	std::vector<std::vector<SimUtil::Vec2>> m_particlePosData;
+	// grid of labels representing solid geometry
+	SimUtil::Mat2Di m_geomGrid;
 
 	// array of VertexData for all particles in current frame
+	//VertexData m_particleVertData[];
 	// array of VertexData for vertices that make up solids
 	// array of indices for how to connect solid vertices
 
@@ -33,22 +66,43 @@ private:
 
 	// shader position attribute
 	// shader color attribute
+	// uniform shader projection matrix attribute
 
 	// offset for color within VertexData struct
 
-	// function to read in particle position data from file, populate array
-	// function to update particle VertexData array for GL each frame (should just be looking at next frame's position data and translating to GL)
+	//----------------------------------------------------------------------
+	// Functions
+	//----------------------------------------------------------------------
+
+	void readInParticleData();
+	void strSplit(const std::string&, char, std::vector<std::string>&);
+	void updateParticleVertexData(int);
+	void updateSolidVertexData();
 	// function to actually update buffer with new particle data
-	// init openGL function
+	// init openGL function (create proj matrix)
+	void initGL();
 	// time function to control frame rate
 	// display function
 
 	// render function (basically like main)
 
 public:
-	FluidRenderer2D();
+	/*
+	Creates a new 2D fluid renderer.
+	Args:
+	- geomFile - name of the file with geometry data in it. Used to draw solid objects in scene.
+	- particleFile - name of the file with particle data in it.
+	- gridWidth - the width of the simulation grid used
+	- gridHeight - the height of the simulation grid used
+	- cellWidth - width of a cell in the simulation grid used
+	*/
+	FluidRenderer2D(std::string, std::string, int, int, float);
 	~FluidRenderer2D();
 
+	/*
+	Initializes renderer by reading in geometry/particle data and preparing to render.
+	*/
+	void init();
 
 };
 

@@ -70,45 +70,11 @@ void FluidSolver2D::saveParticleData(std::ofstream *particleOut) {
 	}
 }
 
+
+
 //----------------------------------------------------------------------
 // Private Functions
 //----------------------------------------------------------------------
-
-/*
-Builds initial grid of dimensions (width, height) that contains the initial
-geometry for the system to simulate. It reads the initial geometry from
-the specified input file parameter.
-Args:
-width/height - grid dimensions
-geomFile - the file containing the geometry
-grid - the 2D array to put the initial grid in
-*/
-void FluidSolver2D::readInGeom(int width, int height, std::string geomFileName, Mat2Di grid) {
-	// open the geometry file
-	std::ifstream geomFile(geomFileName);
-	if (geomFile.is_open()) {
-		std::string lineStr;
-		// parse file based on given dimensions, will error if file does not match these
-		// fills grid so that [0][0] is at bottom left corner of simulation
-		for (int i = height - 1; i >= 0; i--) {
-			std::getline(geomFile, lineStr);
-			for (int j = 0; j < width; j++) {
-				switch (lineStr[j]) {
-				case 'f':
-					grid[i][j] = SimUtil::FLUID;
-					break;
-				case 's':
-					grid[i][j] = SimUtil::SOLID;
-					break;
-				case 'a':
-					grid[i][j] = SimUtil::AIR;
-					break;
-				}
-			}
-		}
-		geomFile.close();
-	}
-}
 
 /*
 Seeds the initial simulation particles. Particles are created for each fluid-labeled

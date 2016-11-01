@@ -61,20 +61,20 @@ int main() {
 		// open and clear output file
 		std::ofstream *particleOut = new std::ofstream(PARTICLE_DATA_FILE_OUT, std::ofstream::trunc);
 
-		FluidSolver2D *solver = new FluidSolver2D(GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH, TIME_STEP);
-		solver->init(INITIAL_GEOMETRY_FILE_IN);
+		FluidSolver2D solver(GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH, TIME_STEP);
+		solver.init(INITIAL_GEOMETRY_FILE_IN);
 		
 		// run simulation
 		int framesOut = 0;
 		float t = 0;
 		while (framesOut < NUM_SIM_FRAMES) {
 			// perform sim time step
-			solver->step();
+			solver.step();
 
 			t += TIME_STEP;
 			// check if need to output data to render at current time
 			if (t - ((framesOut + 1) * FRAME_TIME_STEP) <= 0.000001f) {
-				solver->saveParticleData(particleOut);
+				solver.saveParticleData(particleOut);
 				framesOut++;
 			}
 		}
@@ -82,10 +82,11 @@ int main() {
 		// cleanup
 		particleOut->close();
 		delete particleOut;
-		delete solver;
 	}
 
 	if (RUN_RENDERING) {
+		FluidRenderer2D renderer(INITIAL_GEOMETRY_FILE_IN, PARTICLE_DATA_FILE_OUT, GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH);
+		renderer.init();
 
 	}
 

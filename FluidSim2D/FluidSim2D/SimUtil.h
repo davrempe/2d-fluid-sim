@@ -1,7 +1,14 @@
 #ifndef SIM_UTIL_H
 #define SIM_UTIL_H
 
+#include <string>
+
 namespace SimUtil {
+	typedef int** Mat2Di;
+	typedef float** Mat2Df;
+	typedef int*** Mat3Di;
+	typedef float*** Mat3Df;
+
 	//----------------------------------------------------------------------
 	// Constants
 	//----------------------------------------------------------------------
@@ -84,6 +91,17 @@ namespace SimUtil {
 	mat - matrix to delete
 	*/
 	template <typename T> void deleteMat3D(int, int, int, T***);
+
+	/*
+	Builds initial grid of dimensions (width, height) that contains the initial
+	geometry for the system to simulate. It reads the initial geometry from
+	the specified input file parameter.
+	Args:
+	width/height - grid dimensions
+	geomFile - the file containing the geometry
+	grid - the 2D array to put the initial grid in
+	*/
+	void readInGeom(int, int, std::string, SimUtil::Mat2Di);
 
 	// vec operations
 }

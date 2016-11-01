@@ -1,6 +1,7 @@
 #include "SimUtil.h"
 
 #include <iostream>
+#include <fstream>
 
 namespace SimUtil {
 
@@ -56,6 +57,33 @@ namespace SimUtil {
 			delete[] mat[i];
 		}
 		delete[] mat;
+	}
+
+	void readInGeom(int width, int height, std::string geomFileName, Mat2Di grid) {
+		// open the geometry file
+		std::ifstream geomFile(geomFileName);
+		if (geomFile.is_open()) {
+			std::string lineStr;
+			// parse file based on given dimensions, will error if file does not match these
+			// fills grid so that [0][0] is at bottom left corner of simulation
+			for (int i = height - 1; i >= 0; i--) {
+				std::getline(geomFile, lineStr);
+				for (int j = 0; j < width; j++) {
+					switch (lineStr[j]) {
+					case 'f':
+						grid[i][j] = SimUtil::FLUID;
+						break;
+					case 's':
+						grid[i][j] = SimUtil::SOLID;
+						break;
+					case 'a':
+						grid[i][j] = SimUtil::AIR;
+						break;
+					}
+				}
+			}
+			geomFile.close();
+		}
 	}
 
 }
