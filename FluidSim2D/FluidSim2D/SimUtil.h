@@ -94,14 +94,27 @@ namespace SimUtil {
 
 	/*
 	Builds initial grid of dimensions (width, height) that contains the initial
-	geometry for the system to simulate. It reads the initial geometry from
-	the specified input file parameter.
+	geometry for the system to simulate. Cell [0][0] in the grid is at the bottom
+	left corner of the input geometry. x is positive right, y is positive left. 
+	It reads the initial geometry from the specified input file parameter.
 	Args:
 	width/height - grid dimensions
 	geomFile - the file containing the geometry
 	grid - the 2D array to put the initial grid in
 	*/
 	void readInGeom(int, int, std::string, SimUtil::Mat2Di);
+
+	/*
+	Finds the physical center location of the cell with index [i][j] (ith row, jth col)
+	in a grid where [0][0] is at the bottom left, based on the given dx.
+	Args:
+	i - row index of cell
+	j - col index of cell
+	dx - single cell dimension
+	Returns:
+	Vec2 (x, y) containing physical location from bottom left corner of grid.
+	*/
+	Vec2 getCellLocation(int, int, float);
 
 	// vec operations
 }

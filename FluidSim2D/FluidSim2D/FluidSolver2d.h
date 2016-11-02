@@ -49,7 +49,6 @@ private:
 	//----------------------------------------------------------------------
 		
 	void seedParticles(int, std::vector<SimUtil::Particle2D>*);
-	SimUtil::Vec2 getCellLocation(int, int);
 
 public:
 	/*

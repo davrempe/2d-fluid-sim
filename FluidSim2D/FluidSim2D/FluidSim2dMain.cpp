@@ -19,7 +19,7 @@
 //----------------------------------------------------------------------
 
 // whether to run the simulation
-const bool RUN_SIM = true;
+const bool RUN_SIM = false;
 // whether to run rendering
 const bool RUN_RENDERING = true;
 

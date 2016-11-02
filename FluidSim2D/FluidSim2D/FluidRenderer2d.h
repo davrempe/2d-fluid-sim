@@ -50,15 +50,28 @@ private:
 	// Rendering-related members
 	//----------------------------------------------------------------------
 
+	GLfloat PARTICLE_COLOR[3] = { 0.0f, 0.0f, 1.0f };
+	GLfloat SOLID_COLOR[3] = { 1.0f, 1.0f, 1.0f };
+
+	const int VERTICES_PER_QUAD = 4;
+	const int INDICES_PER_QUAD = 6;
+	const int BYTES_PER_FLOAT = sizeof(GLfloat);
+
 	// particle position data for every frame
 	std::vector<std::vector<SimUtil::Vec2>> m_particlePosData;
 	// grid of labels representing solid geometry
 	SimUtil::Mat2Di m_geomGrid;
 
 	// array of VertexData for all particles in current frame
-	//VertexData m_particleVertData[];
+	VertexData *m_particleVertData;
+	// number of particles in current particle VertexData array
+	int m_numParticlesInFrame;
 	// array of VertexData for vertices that make up solids
+	VertexData *m_solidVertData;
 	// array of indices for how to connect solid vertices
+	GLushort *m_solidIndData;
+	// number of solid quads in current vertex/index data arrays
+	int m_numberSolidCells;
 
 	// buffer for particle vertices
 	// buffer for solid vertices
@@ -77,7 +90,7 @@ private:
 	void readInParticleData();
 	void strSplit(const std::string&, char, std::vector<std::string>&);
 	void updateParticleVertexData(int);
-	void updateSolidVertexData();
+	void initSolidVertexData();
 	// function to actually update buffer with new particle data
 	// init openGL function (create proj matrix)
 	void initGL();

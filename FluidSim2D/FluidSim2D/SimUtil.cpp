@@ -86,6 +86,10 @@ namespace SimUtil {
 		}
 	}
 
+	Vec2 getCellLocation(int i, int j, float dx) {
+		return Vec2(j*dx + 0.5f*dx, i*dx + 0.5f*dx);
+	}
+
 }
 
 // explicit instantiation of template functions for compilation

@@ -91,7 +91,7 @@ void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<Particle2D> 
 		for (int j = 0; j < m_gridWidth; j++) {
 			if (m_label[i][j] == SimUtil::FLUID) {
 				// seed randomly in 2x2 subgrid of the cell
-				Vec2 cellCenter = getCellLocation(i, j);
+				Vec2 cellCenter = getCellLocation(i, j, m_dx);
 				Vec2 subCenters[] = {
 					Vec2(cellCenter.x - 0.25f*m_dx, cellCenter.y + 0.25f*m_dx), // top left
 					Vec2(cellCenter.x + 0.25f*m_dx, cellCenter.y + 0.25f*m_dx), // top right
@@ -111,19 +111,6 @@ void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<Particle2D> 
 			}
 		}
 	}
-}
-
-/*
-Finds the physical center location of the cell with index [i][j] (ith row, jth col)
-based on dx
-Args:
-i - row index of cell
-j - col index of cell
-Returns:
-Vec2 (x, y) containing physical location from bottom left corner of grid.
-*/
-Vec2 FluidSolver2D::getCellLocation(int i, int j) {
-	return Vec2(j*m_dx + 0.5f*m_dx, i*m_dx + 0.5f*m_dx);
 }
 
 
