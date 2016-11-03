@@ -19,7 +19,7 @@
 //----------------------------------------------------------------------
 
 // whether to run the simulation
-const bool RUN_SIM = false;
+const bool RUN_SIM = true;
 // whether to run rendering
 const bool RUN_RENDERING = true;
 
@@ -44,7 +44,7 @@ const std::string INITIAL_GEOMETRY_FILE_IN = "initial_geometry.txt";
 // output file for particle data
 const std::string PARTICLE_DATA_FILE_OUT = "particle_data.csv";
 // the number of frames to simulate
-const int NUM_SIM_FRAMES = 125;
+const int NUM_SIM_FRAMES = 1;// 125;
 // frame rate for render (fps)
 const float FRAME_RATE = 25.0f;
 // time step between outputted frames
@@ -56,7 +56,7 @@ const float FRAME_TIME_STEP = 1.0f / FRAME_RATE;
 
 
 
-int main() {
+int main(int argc, char** argv) {
 	if (RUN_SIM) {
 		// open and clear output file
 		std::ofstream *particleOut = new std::ofstream(PARTICLE_DATA_FILE_OUT, std::ofstream::trunc);
@@ -86,8 +86,8 @@ int main() {
 
 	if (RUN_RENDERING) {
 		FluidRenderer2D renderer(INITIAL_GEOMETRY_FILE_IN, PARTICLE_DATA_FILE_OUT, GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH);
-		renderer.init();
-
+		renderer.init(argc, argv);
+		renderer.render();
 	}
 
 

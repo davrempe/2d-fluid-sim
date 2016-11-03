@@ -1,15 +1,26 @@
 #include "FluidRenderer2d.h"
 #include "FluidSolver2d.h"
+#include "LoadProgram.h"
 
 #include <gl/glut.h> 
-#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 
+// current instance of the renderer
+FluidRenderer2D* g_rendererContext;
+
+extern "C"
+void displayCallback() {
+	g_rendererContext->display();
+}
+
 FluidRenderer2D::FluidRenderer2D(std::string geomFile, std::string particleFile, int gridWidth, int gridHeight, float cellWidth) : m_geomFile(geomFile), m_particleFile(particleFile), m_width(gridWidth), m_height(gridHeight), m_dx(cellWidth) {
 	// initialize vertex data arrays
 	m_particleVertData = new VertexData[1];
+
+	m_currentFrame = 0;
 }
 
 FluidRenderer2D::~FluidRenderer2D() {
@@ -18,15 +29,36 @@ FluidRenderer2D::~FluidRenderer2D() {
 	delete[] m_solidIndData;
 }
 
-void FluidRenderer2D::init() {
+void FluidRenderer2D::init(int argc, char** argv) {
 	// read in particle data to array
 	readInParticleData();
 	// read in geometry data
 	m_geomGrid = SimUtil::initMat2D<int>(m_height, m_width);
 	SimUtil::readInGeom(m_width, m_height, m_geomFile, m_geomGrid);
 
+	// set up glut and glew
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
+	glutInitWindowSize(720, 720);
+	glutCreateWindow("Fluid Simulation");
+	glewInit();
+
 	// set up OpenGL
 	initGL();
+
+	g_rendererContext = this;
+	glutDisplayFunc(displayCallback);
+	/*glutReshapeFunc(reshape);
+	glutKeyboardFunc(key);
+	glutSpecialFunc(specialKey);
+	glutMouseFunc(mouse);
+	glutMotionFunc(drag);
+	glutPassiveMotionFunc(trackMousePos);*/
+
+}
+
+void FluidRenderer2D::render() {
+	glutMainLoop();
 }
 
 //----------------------------------------------------------------------
@@ -102,12 +134,95 @@ void FluidRenderer2D::initGL() {
 	// enable blending
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glPointSize(5);
 
 	// fill particle vertex array with initial data
 	updateParticleVertexData(0);
 	// fill solids vertex array with initial data
 	initSolidVertexData();
-	// create projection matrix
+	// create view-projection matrix
+	glm::mat4 cameraMat = glm::lookAt(
+		glm::vec3(0, 0, 0.1), // camera position
+		glm::vec3(0, 0, 0), // where to look
+		glm::vec3(0, 1, 0) // up vec
+	);
+	glm::mat4 projMat = glm::ortho(-0.5f, 0.5f, 0.5f, 0.5f, 0.0f, 2.0f);
+	m_vpMat = cameraMat * projMat;
+
+	// calculate offset for color in VertexData object
+	m_vColorOffset = BYTES_PER_FLOAT * 2;
+
+	// create buffers
+	GLuint buffs[3];
+	glGenBuffers(3, buffs);
+	m_pvBuffer = buffs[0];
+	m_svBuffer = buffs[1];
+	m_siBuffer = buffs[2];
+
+	//init buffers
+	// particle vertex buffer
+	glBindBuffer(GL_ARRAY_BUFFER, m_pvBuffer);
+	glBufferData(GL_ARRAY_BUFFER, m_numParticlesInFrame * sizeof(m_particleVertData), m_particleVertData, GL_DYNAMIC_DRAW);
+	// solid vertex buffer
+	glBindBuffer(GL_ARRAY_BUFFER, m_svBuffer);
+	glBufferData(GL_ARRAY_BUFFER, m_numberSolidCells * VERTICES_PER_QUAD * sizeof(m_solidVertData), m_solidVertData, GL_STATIC_DRAW);
+	// solid index buffer
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_siBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_numberSolidCells * INDICES_PER_QUAD * sizeof(m_solidIndData), m_solidIndData, GL_STATIC_DRAW);
+
+	// create shaders
+	const char* vShadeFile = "vert.glsl";
+	const char* fShadeFile = "frag.glsl";
+
+	m_shaderProgram = LoadProgram(vShadeFile, fShadeFile);
+	m_vPos = glGetAttribLocation(m_shaderProgram, "vPos");
+	m_vColor = glGetAttribLocation(m_shaderProgram, "vColor");
+	m_MVP = glGetUniformLocation(m_shaderProgram, "MVP");
+
+	// can set matrix right now, doesn't change
+	glUniformMatrix4fv(m_MVP, 1, GL_FALSE, &m_vpMat[0][0]);
+
+	glClearColor(BACKGROUND_COLOR[0], BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], 0.0f);
+}
+
+/*
+Renders current particle and solid data.
+*/
+void FluidRenderer2D::display() {
+	
+	// update buffer data
+	// TODO
+
+	glClear(GL_COLOR_BUFFER_BIT);
+	// draw solids
+	glBindBuffer(GL_ARRAY_BUFFER, m_svBuffer);
+	glVertexAttribPointer(m_vPos, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), BUFFER_OFFSET(0));
+	glVertexAttribPointer(m_vColor, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), BUFFER_OFFSET(m_vColorOffset));
+	glEnableVertexAttribArray(m_vPos);
+	glEnableVertexAttribArray(m_vColor);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_siBuffer);
+	glDrawElements(GL_TRIANGLES, m_numberSolidCells * INDICES_PER_QUAD, GL_UNSIGNED_SHORT, BUFFER_OFFSET(0));
+
+	// draw particles
+	glBindBuffer(GL_ARRAY_BUFFER, m_pvBuffer);
+	glVertexAttribPointer(m_vPos, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), BUFFER_OFFSET(0));
+	glVertexAttribPointer(m_vColor, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), BUFFER_OFFSET(m_vColorOffset));
+	glEnableVertexAttribArray(m_vPos);
+	glEnableVertexAttribArray(m_vColor);
+
+	glDrawArrays(GL_POINTS, 0, m_numParticlesInFrame);
+
+	// free buffers
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	// actually draw
+	// TODO call timer function
+	glutSwapBuffers();
+	glutPostRedisplay();
+
+	m_currentFrame++;
 }
 
 /*

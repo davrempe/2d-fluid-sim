@@ -1,7 +1,10 @@
 #ifndef FLUID_RENDERER_2D_H_
 #define FLUID_RENDERER_2D_H_
 
+#define BUFFER_OFFSET(offset) ((GLvoid*) offset)
+
 #include <gl/glew.h>
+#include <glm/glm.hpp>
 #include <string>
 #include <vector>
 
@@ -52,15 +55,21 @@ private:
 
 	GLfloat PARTICLE_COLOR[3] = { 0.0f, 0.0f, 1.0f };
 	GLfloat SOLID_COLOR[3] = { 1.0f, 1.0f, 1.0f };
+	GLfloat BACKGROUND_COLOR[3] = { 0.2f, 0.2f, 0.2f };
 
 	const int VERTICES_PER_QUAD = 4;
 	const int INDICES_PER_QUAD = 6;
 	const int BYTES_PER_FLOAT = sizeof(GLfloat);
 
+	// frame currently being rendered
+	int m_currentFrame;
+
 	// particle position data for every frame
 	std::vector<std::vector<SimUtil::Vec2>> m_particlePosData;
 	// grid of labels representing solid geometry
 	SimUtil::Mat2Di m_geomGrid;
+	// view projection matrix
+	glm::mat4 m_vpMat;
 
 	// array of VertexData for all particles in current frame
 	VertexData *m_particleVertData;
@@ -72,16 +81,24 @@ private:
 	GLushort *m_solidIndData;
 	// number of solid quads in current vertex/index data arrays
 	int m_numberSolidCells;
+	// offset of color attribute in VertexData struct
+	GLintptr m_vColorOffset;
 
 	// buffer for particle vertices
+	GLuint m_pvBuffer;
 	// buffer for solid vertices
+	GLuint m_svBuffer;
 	// buffer for solid indices
+	GLuint m_siBuffer;
 
 	// shader position attribute
+	GLuint m_vPos;
 	// shader color attribute
+	GLuint m_vColor;
 	// uniform shader projection matrix attribute
-
-	// offset for color within VertexData struct
+	GLuint m_MVP;
+	// shader program
+	GLuint m_shaderProgram;
 
 	//----------------------------------------------------------------------
 	// Functions
@@ -92,13 +109,13 @@ private:
 	void updateParticleVertexData(int);
 	void initSolidVertexData();
 	// function to actually update buffer with new particle data
-	// init openGL function (create proj matrix)
+	// TODO
 	void initGL();
 	// time function to control frame rate
-	// display function
+	// TODO
 
-	// render function (basically like main)
-
+	// TODO transform meters to GL units
+	
 public:
 	/*
 	Creates a new 2D fluid renderer.
@@ -114,9 +131,19 @@ public:
 
 	/*
 	Initializes renderer by reading in geometry/particle data and preparing to render.
+	Args:
+	argc - unmodified argc from main
+	argv - unmodified argv from main
 	*/
-	void init();
+	void init(int, char**);
 
+	/*
+	Starts the renderer.
+	*/
+	void render();
+
+	// display function, should not be called from outside the renderer
+	void display();
 };
 
 #endif //FLUID_RENDERER_2D_H_
