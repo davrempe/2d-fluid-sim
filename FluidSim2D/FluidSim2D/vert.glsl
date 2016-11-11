@@ -8,6 +8,6 @@ out vec3 fColor;
 
 void main() {
 	fColor = vColor;
-
-	gl_Position = MVP * vec4(vPos, 0.0, 1.0);
+	// add MVP
+	gl_Position = MVP * vec4(vPos.x, vPos.y, 0.0, 1.0);
 }

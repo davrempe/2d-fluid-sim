@@ -42,12 +42,14 @@ private:
 	//----------------------------------------------------------------------
 	// Particle-related Members
 	//----------------------------------------------------------------------
-	std::vector<SimUtil::Particle2D > *m_particles;
+
+	// list of all particles in the simulation
+	std::vector<SimUtil::Particle2D> *m_particles;
 
 	//----------------------------------------------------------------------
 	// Functions
 	//----------------------------------------------------------------------
-		
+
 	void seedParticles(int, std::vector<SimUtil::Particle2D>*);
 
 public:

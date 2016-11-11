@@ -2,8 +2,10 @@
 #include "FluidSolver2d.h"
 #include "LoadProgram.h"
 
-#include <gl/glut.h> 
+#include <gl/glut.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -16,11 +18,17 @@ void displayCallback() {
 	g_rendererContext->display();
 }
 
-FluidRenderer2D::FluidRenderer2D(std::string geomFile, std::string particleFile, int gridWidth, int gridHeight, float cellWidth) : m_geomFile(geomFile), m_particleFile(particleFile), m_width(gridWidth), m_height(gridHeight), m_dx(cellWidth) {
+extern "C"
+void timerCallback(int id) {
+	g_rendererContext->timer(id);
+}
+
+FluidRenderer2D::FluidRenderer2D(std::string geomFile, std::string particleFile, float frameRate, int gridWidth, int gridHeight, float cellWidth) : m_geomFile(geomFile), m_particleFile(particleFile), m_width(gridWidth), m_height(gridHeight), m_dx(cellWidth) {
 	// initialize vertex data arrays
 	m_particleVertData = new VertexData[1];
 
 	m_currentFrame = 0;
+	m_frameTime = 1.0f / frameRate;
 }
 
 FluidRenderer2D::~FluidRenderer2D() {
@@ -67,19 +75,22 @@ void FluidRenderer2D::render() {
 
 /*
 Fills array of particle VertexData with particle data from the given frame.
+If the frame is greater than the total number of frames, it will show the
+given frameNum % totalNumFrames.
 Args:
 - frameNum - the frame to update the array with
 */
 void FluidRenderer2D::updateParticleVertexData(int frameNum) {
+	int totalFrames = m_particlePosData.size();
 	// clear array from previous frame
 	delete[] m_particleVertData;
 	// reallocate to proper size
-	m_numParticlesInFrame = m_particlePosData[frameNum].size();
+	m_numParticlesInFrame = m_particlePosData[frameNum % totalFrames].size();
 	m_particleVertData = new VertexData[m_numParticlesInFrame];
 
 	// populate array
 	for (int i = 0; i < m_numParticlesInFrame; i++) {
-		SimUtil::Vec2 curParticle = m_particlePosData[frameNum][i];
+		SimUtil::Vec2 curParticle = m_particlePosData[frameNum % totalFrames][i];
 		GLfloat particlePos[2] = { curParticle.x, curParticle.y };
 		m_particleVertData[i] = VertexData(particlePos, PARTICLE_COLOR);
 	}
@@ -128,26 +139,37 @@ void FluidRenderer2D::initSolidVertexData() {
 }
 
 /*
+Updates the buffers for the current frame being rendered.
+*/
+void FluidRenderer2D::updateBufferData(int frameNum) {
+	// first update the particle data for this frame
+	updateParticleVertexData(frameNum);
+
+	// refill the buffer with new data
+	glBindBuffer(GL_ARRAY_BUFFER, m_pvBuffer);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, m_numParticlesInFrame * sizeof(VertexData), m_particleVertData);
+
+	// solid data does not change frame to frame
+}
+
+/*
 Initializes OpenGL for use by initializing buffers, shaders, and attributes.
 */
 void FluidRenderer2D::initGL() {
 	// enable blending
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glPointSize(5);
+	glPointSize(4);
 
 	// fill particle vertex array with initial data
 	updateParticleVertexData(0);
 	// fill solids vertex array with initial data
 	initSolidVertexData();
-	// create view-projection matrix
-	glm::mat4 cameraMat = glm::lookAt(
-		glm::vec3(0, 0, 0.1), // camera position
-		glm::vec3(0, 0, 0), // where to look
-		glm::vec3(0, 1, 0) // up vec
-	);
-	glm::mat4 projMat = glm::ortho(-0.5f, 0.5f, 0.5f, 0.5f, 0.0f, 2.0f);
-	m_vpMat = cameraMat * projMat;
+	// create transformation matrix
+	float scale = 2.0f / (m_width*m_dx);
+	glm::mat4 scaleMat = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, 1.0f));
+	glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), glm::vec3((-m_width*m_dx) / 2.0f, (-m_height*m_dx) / 2.0f, 0.0f));
+	m_transMat = scaleMat* translateMat;
 
 	// calculate offset for color in VertexData object
 	m_vColorOffset = BYTES_PER_FLOAT * 2;
@@ -162,13 +184,13 @@ void FluidRenderer2D::initGL() {
 	//init buffers
 	// particle vertex buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_pvBuffer);
-	glBufferData(GL_ARRAY_BUFFER, m_numParticlesInFrame * sizeof(m_particleVertData), m_particleVertData, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, m_numParticlesInFrame * sizeof(VertexData), m_particleVertData, GL_DYNAMIC_DRAW);
 	// solid vertex buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_svBuffer);
-	glBufferData(GL_ARRAY_BUFFER, m_numberSolidCells * VERTICES_PER_QUAD * sizeof(m_solidVertData), m_solidVertData, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, m_numberSolidCells * VERTICES_PER_QUAD * sizeof(VertexData), m_solidVertData, GL_STATIC_DRAW);
 	// solid index buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_siBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_numberSolidCells * INDICES_PER_QUAD * sizeof(m_solidIndData), m_solidIndData, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_numberSolidCells * INDICES_PER_QUAD * sizeof(GLushort), m_solidIndData, GL_STATIC_DRAW);
 
 	// create shaders
 	const char* vShadeFile = "vert.glsl";
@@ -177,12 +199,14 @@ void FluidRenderer2D::initGL() {
 	m_shaderProgram = LoadProgram(vShadeFile, fShadeFile);
 	m_vPos = glGetAttribLocation(m_shaderProgram, "vPos");
 	m_vColor = glGetAttribLocation(m_shaderProgram, "vColor");
-	m_MVP = glGetUniformLocation(m_shaderProgram, "MVP");
+	m_MVP = glGetUniformLocation(m_shaderProgram, "MVP");	
 
-	// can set matrix right now, doesn't change
-	glUniformMatrix4fv(m_MVP, 1, GL_FALSE, &m_vpMat[0][0]);
+	glClearColor(BACKGROUND_COLOR[0], BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], 1.0f);
+}
 
-	glClearColor(BACKGROUND_COLOR[0], BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], 0.0f);
+// called at certain time increments to redraw and calculate fps
+void FluidRenderer2D::timer(int id) {
+	glutPostRedisplay();
 }
 
 /*
@@ -191,15 +215,18 @@ Renders current particle and solid data.
 void FluidRenderer2D::display() {
 	
 	// update buffer data
-	// TODO
+	updateBufferData(m_currentFrame);
 
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	glUseProgram(m_shaderProgram);
 	// draw solids
 	glBindBuffer(GL_ARRAY_BUFFER, m_svBuffer);
 	glVertexAttribPointer(m_vPos, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), BUFFER_OFFSET(0));
 	glVertexAttribPointer(m_vColor, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), BUFFER_OFFSET(m_vColorOffset));
 	glEnableVertexAttribArray(m_vPos);
 	glEnableVertexAttribArray(m_vColor);
+	glUniformMatrix4fv(m_MVP, 1, GL_FALSE, glm::value_ptr(m_transMat));
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_siBuffer);
 	glDrawElements(GL_TRIANGLES, m_numberSolidCells * INDICES_PER_QUAD, GL_UNSIGNED_SHORT, BUFFER_OFFSET(0));
@@ -210,6 +237,7 @@ void FluidRenderer2D::display() {
 	glVertexAttribPointer(m_vColor, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), BUFFER_OFFSET(m_vColorOffset));
 	glEnableVertexAttribArray(m_vPos);
 	glEnableVertexAttribArray(m_vColor);
+	glUniformMatrix4fv(m_MVP, 1, GL_FALSE, glm::value_ptr(m_transMat));
 
 	glDrawArrays(GL_POINTS, 0, m_numParticlesInFrame);
 
@@ -218,11 +246,13 @@ void FluidRenderer2D::display() {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	// actually draw
-	// TODO call timer function
 	glutSwapBuffers();
-	glutPostRedisplay();
 
 	m_currentFrame++;
+
+	// call timer function
+	// set redisplay at inputted fps
+	glutTimerFunc(m_frameTime*1000, timerCallback, 0);
 }
 
 /*
@@ -252,7 +282,9 @@ void FluidRenderer2D::readInParticleData() {
 				frameVec.push_back(pos);
 			}
 
-			m_particlePosData.push_back(frameVec);
+			if (frameVec.size() > 0) {
+				m_particlePosData.push_back(frameVec);
+			}
 			curFrame++;
 		}
 		particleFile.close();

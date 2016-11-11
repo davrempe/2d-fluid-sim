@@ -63,13 +63,15 @@ private:
 
 	// frame currently being rendered
 	int m_currentFrame;
+	// the seconds between each frame for the given frame rate
+	float m_frameTime;
 
 	// particle position data for every frame
 	std::vector<std::vector<SimUtil::Vec2>> m_particlePosData;
 	// grid of labels representing solid geometry
 	SimUtil::Mat2Di m_geomGrid;
-	// view projection matrix
-	glm::mat4 m_vpMat;
+	// transform matrix
+	glm::mat4 m_transMat;
 
 	// array of VertexData for all particles in current frame
 	VertexData *m_particleVertData;
@@ -108,13 +110,10 @@ private:
 	void strSplit(const std::string&, char, std::vector<std::string>&);
 	void updateParticleVertexData(int);
 	void initSolidVertexData();
-	// function to actually update buffer with new particle data
-	// TODO
+	void updateBufferData(int);
 	void initGL();
 	// time function to control frame rate
 	// TODO
-
-	// TODO transform meters to GL units
 	
 public:
 	/*
@@ -122,11 +121,12 @@ public:
 	Args:
 	- geomFile - name of the file with geometry data in it. Used to draw solid objects in scene.
 	- particleFile - name of the file with particle data in it.
+	- frameRate - the frame rate to render at
 	- gridWidth - the width of the simulation grid used
 	- gridHeight - the height of the simulation grid used
 	- cellWidth - width of a cell in the simulation grid used
 	*/
-	FluidRenderer2D(std::string, std::string, int, int, float);
+	FluidRenderer2D(std::string, std::string, float, int, int, float);
 	~FluidRenderer2D();
 
 	/*
@@ -144,6 +144,8 @@ public:
 
 	// display function, should not be called from outside the renderer
 	void display();
+	// time function, should not be called from outside the renderer
+	void timer(int);
 };
 
 #endif //FLUID_RENDERER_2D_H_
