@@ -41,7 +41,7 @@ void FluidRenderer2D::init(int argc, char** argv) {
 	// read in particle data to array
 	readInParticleData();
 	// read in geometry data
-	m_geomGrid = SimUtil::initMat2D<int>(m_height, m_width);
+	m_geomGrid = SimUtil::initGrid2D<int>(m_width, m_height);
 	SimUtil::readInGeom(m_width, m_height, m_geomFile, m_geomGrid);
 
 	// set up glut and glew
@@ -106,11 +106,11 @@ void FluidRenderer2D::initSolidVertexData() {
 
 	// traverse geometry grid to find solid cells
 	m_numberSolidCells = 0;
-	for (int i = 0; i < m_height; i++) {
-		for (int j = 0; j < m_width; j++) {
+	for (int i = 0; i < m_width; i++) {
+		for (int j = 0; j < m_height; j++) {
 			if (m_geomGrid[i][j] == SimUtil::SOLID) {
 				// build quad over that cell
-				SimUtil::Vec2 cellCenter = SimUtil::getCellLocation(i, j, m_dx);
+				SimUtil::Vec2 cellCenter = SimUtil::getGridCellPosition(i, j, m_dx);
 				GLfloat nwPos[2] = { cellCenter.x - 0.5f*m_dx, cellCenter.y + 0.5f*m_dx };
 				GLfloat nePos[2] = { cellCenter.x + 0.5f*m_dx, cellCenter.y + 0.5f*m_dx };
 				GLfloat sePos[2] = { cellCenter.x + 0.5f*m_dx, cellCenter.y - 0.5f*m_dx };

@@ -23,6 +23,10 @@ private:
 	float m_dx;
 	// grid of cell labels, size (nx, ny)
 	SimUtil::Mat2Di m_label;
+	// pressure and velocity are held in a MAC grid so that
+	// p(i, j, k) = p_i_j_k
+	// u(i, j, k) = u_i-1/2_j_k
+	// v(i, j, k) = v_i_j-1/2_k
 	// grid of pressures, size (nx, ny)
 	SimUtil::Mat2Df m_p;
 	// grid of vel x component, size (nx+1, ny)
@@ -50,7 +54,17 @@ private:
 	// Functions
 	//----------------------------------------------------------------------
 
+	// solver steps
+
 	void seedParticles(int, std::vector<SimUtil::Particle2D>*);
+	void labelGrid();
+	void particlesToGrid();
+	void extrapolateGridFluidData(int);
+
+	// helper functions
+	double trilinearHatKernel(SimUtil::Vec2);
+	double hatFunction(double);
+	double quadBSplineKernel(SimUtil::Vec2);
 
 public:
 	/*

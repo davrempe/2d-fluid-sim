@@ -6,8 +6,10 @@
 namespace SimUtil {
 	typedef int** Mat2Di;
 	typedef float** Mat2Df;
+	typedef double** Mat2Dd;
 	typedef int*** Mat3Di;
 	typedef float*** Mat3Df;
+	typedef double*** Mat3Dd;
 
 	//----------------------------------------------------------------------
 	// Constants
@@ -72,6 +74,27 @@ namespace SimUtil {
 	T** - matrix to print
 	*/
 	template <typename T> void printMat2D(int, int, T**);
+
+	/*
+	Initializes a 2D grid. This is done in column major so the grid can lie on
+	a cartesian coordinate system so that (0,0) is at the bottom left corner of grid cell [0][0]. And
+	generally grid cells can be accessed [x][y].
+	Args:
+	x - x dimension width (in number of cells)
+	y - y dimension height (in number of cells)
+	Returns:
+	T** - the dynamic array
+	*/
+	template <typename T> T** initGrid2D(int, int);
+	/*
+	Deletes a 2D grid.
+	Args:
+	x - x dimension width
+	y - y dimension height
+	grid - grid to delete
+	*/
+	template <typename T> void deleteGrid2D(int, int, T**);
+
 	/*
 	Initializes a 3D matrix.
 	Args:
@@ -93,30 +116,77 @@ namespace SimUtil {
 	template <typename T> void deleteMat3D(int, int, int, T***);
 
 	/*
-	Builds initial grid of dimensions (width, height) that contains the initial
+	Initializes a 3D grid. This is done in column major so the grid can lie on
+	a cartesian coordinate system so that (0,0,0) is at the bottom left back corner of grid cell [0][0][0]. And
+	generally grid cells can be accessed [x][y][z].
+	Args:
+	x - x dimension width (in grid cells)
+	y - y dimension height (in grid cells)
+	z - z dimension depth (in grid cells)
+	Returns:
+	T** - the dynamic array
+	*/
+	template <typename T> T*** initGrid3D(int, int, int);
+	/*
+	Deletes a 3D grid.
+	Args:
+	x - x dimension width
+	y - y dimension height
+	z - z dimension depth
+	grid - grid to delete
+	*/
+	template <typename T> void deleteGrid3D(int, int, int, T***);
+
+	/*
+	Builds initial grid of dimensions (x, y) that contains the initial
 	geometry for the system to simulate. Cell [0][0] in the grid is at the bottom
-	left corner of the input geometry. x is positive right, y is positive left. 
+	left corner of the input geometry, so it's treated as if the input grid was initialized
+	using initGrid2D. x is positive right, y is positive up. 
 	It reads the initial geometry from the specified input file parameter.
 	Args:
-	width/height - grid dimensions
+	x, y - grid dimensions in number of cells
 	geomFile - the file containing the geometry
 	grid - the 2D array to put the initial grid in
 	*/
 	void readInGeom(int, int, std::string, SimUtil::Mat2Di);
 
 	/*
-	Finds the physical center location of the cell with index [i][j] (ith row, jth col)
-	in a grid where [0][0] is at the bottom left, based on the given dx.
+	Finds the physical location of the cell with index [x][y]
+	in a grid where [0][0] is the center of the bottom left cell, based on the given dx. 
+	Integer indices are treated in the center of cells while fractional indices may lie anywhere
+	in a grid cell.
 	Args:
-	i - row index of cell
-	j - col index of cell
+	i - x index of cell
+	j - y index of cell
 	dx - single cell dimension
 	Returns:
 	Vec2 (x, y) containing physical location from bottom left corner of grid.
 	*/
-	Vec2 getCellLocation(int, int, float);
+	Vec2 getGridCellPosition(float, float, float);
+	/*
+	Returns array of size 2 that contains the integer grid cell with index [i][j] at its center that contains the given position.
+	Args:
+	pos - a Vec2 (x,y) coordinate containing the position to use based on the origin at the bottom left of the simulation.
+	dx - single cell dimension
+	*/
+	int* getGridCellIndex(Vec2 pos, float);
 
 	// vec operations
+
+	/*
+	Calculates the difference of vec1 and vec2 (vec1 - vec2) and returns a new vector containing this subtraction.
+	Args
+	vec1 - first vector
+	vec2 - second vector
+	*/
+	Vec2 sub(Vec2, Vec2);
+	/*
+	Calculates the difference of vec1 and vec2 (vec1 - vec2) and returns a new vector containing this subtraction.
+	Args
+	vec1 - first vector
+	vec2 - second vector
+	*/
+	Vec3 sub(Vec3, Vec3);
 }
 
 #endif //SIM_UTIL_H

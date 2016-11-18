@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
 		std::ofstream *particleOut = new std::ofstream(PARTICLE_DATA_FILE_OUT, std::ofstream::trunc);
 
 		FluidSolver2D solver(GRID_WIDTH, GRID_HEIGHT, GRID_CELL_WIDTH, TIME_STEP);
+		std::cout << "Simulating Frame 1" << std::endl;
 		solver.init(INITIAL_GEOMETRY_FILE_IN);
 		
 		// run simulation
@@ -70,6 +71,8 @@ int main(int argc, char** argv) {
 		int framesOut = 1;
 		float t = 0;
 		while (framesOut < NUM_SIM_FRAMES) {
+			std::cout << "Simulating Frame " << framesOut + 1 << std::endl;
+
 			// perform sim time step
 			solver.step();
 
