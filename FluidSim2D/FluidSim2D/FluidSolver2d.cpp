@@ -8,6 +8,8 @@
 #include "FluidSolver2d.h"
 #include "SimUtil.h"
 
+#define DEBUG 0
+
 using namespace SimUtil;
 
 //----------------------------------------------------------------------
@@ -32,7 +34,9 @@ FluidSolver2D::~FluidSolver2D(){
 	deleteGrid2D<int>(m_gridWidth, m_gridHeight, m_label);
 	deleteGrid2D<float>(m_gridWidth, m_gridHeight, m_p);
 	deleteGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
+	deleteGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_uSaved);
 	deleteGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
+	deleteGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_vSaved);
 
 	delete m_particles;
 }
@@ -46,11 +50,13 @@ void FluidSolver2D::init(std::string initialGeometryFile){
 	m_label = initGrid2D<int>(m_gridWidth, m_gridHeight);
 	m_p = initGrid2D<float>(m_gridWidth, m_gridHeight);
 	m_u = initGrid2D<float>(m_gridWidth + 1, m_gridHeight);
+	m_uSaved = initGrid2D<float>(m_gridWidth + 1, m_gridHeight);
 	m_v = initGrid2D<float>(m_gridWidth, m_gridHeight + 1);
+	m_vSaved = initGrid2D<float>(m_gridWidth, m_gridHeight + 1);
 
 	// read in initial geometry to populate label grid
 	readInGeom(m_gridWidth, m_gridHeight, initialGeometryFile, m_label);
-	//printMat2D<int>(m_gridHeight, m_gridWidth, m_label);
+	if (DEBUG) printGrid2D<int>(m_gridWidth, m_gridHeight, m_label);
 
 	// seed particles using label grid
 	seedParticles(PARTICLES_PER_CELL, m_particles);
@@ -59,12 +65,18 @@ void FluidSolver2D::init(std::string initialGeometryFile){
 void FluidSolver2D::step() {
 	// update the grid labels
 	labelGrid();
+	if (DEBUG) printGrid2D<int>(m_gridWidth, m_gridHeight, m_label);
 	// transfer particle vel to grid
 	particlesToGrid();
+	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
+	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
 	// extrapolate fluid data out one cell for accurate divergence calculations
 	extrapolateGridFluidData(m_u, m_gridWidth + 1, m_gridHeight, 1);
 	extrapolateGridFluidData(m_v, m_gridWidth, m_gridHeight + 1, 1);
-	
+	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
+	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
+	// save copy of current grid velocities for FLIP update
+	saveVelocityGrids();
 }
 
 void FluidSolver2D::saveParticleData(std::ofstream *particleOut) {
@@ -79,9 +91,8 @@ void FluidSolver2D::saveParticleData(std::ofstream *particleOut) {
 }
 
 
-
 //----------------------------------------------------------------------
-// Private Functions
+// Private Main Solver Step Functions
 //----------------------------------------------------------------------
 
 /*
@@ -310,6 +321,29 @@ void FluidSolver2D::extrapolateGridFluidData(Mat2Df grid, int x, int y, int dept
 	}
 	
 }
+
+/*
+Saves a copy of the current velocity grids to be used on the FLIP updated
+*/
+void FluidSolver2D::saveVelocityGrids() {
+	// save u grid
+	for (int i = 0; i < m_gridWidth + 1; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			m_uSaved[i][j] = m_u[i][j];
+		}
+	}
+
+	// save v grid
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight + 1; j++) {
+			m_vSaved[i][j] = m_v[i][j];
+		}
+	}
+}
+
+//----------------------------------------------------------------------
+// Private Helper Functions
+//----------------------------------------------------------------------
 
 /*
 Checks neighbors of the given index in the given grid for the given value. Returns true if

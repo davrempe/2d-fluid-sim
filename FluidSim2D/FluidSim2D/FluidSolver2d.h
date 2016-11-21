@@ -34,6 +34,11 @@ private:
 	// grid of vel y component, size (nx, ny+1)
 	SimUtil::Mat2Df m_v;
 
+	// saved grid of vel x component for FLIP update, size (nx+1, ny)
+	SimUtil::Mat2Df m_uSaved;
+	// saved grid of vel y component for FLIP update, size (nx, ny+1)
+	SimUtil::Mat2Df m_vSaved;
+
 	//----------------------------------------------------------------------
 	// Simulation Attributes
 	//----------------------------------------------------------------------
@@ -60,6 +65,7 @@ private:
 	void labelGrid();
 	void particlesToGrid();
 	void extrapolateGridFluidData(SimUtil::Mat2Df, int, int, int);
+	void saveVelocityGrids();
 
 	// helper functions
 	double trilinearHatKernel(SimUtil::Vec2);

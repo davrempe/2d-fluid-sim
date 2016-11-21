@@ -45,6 +45,19 @@ namespace SimUtil {
 		deleteMat2D<T>(x, y, grid);
 	}
 
+	template <typename T>
+	void printGrid2D(int x, int y, T** grid) {
+		std::cout << "====================================================================================\n";
+		for (int i = y - 1; i >= 0; i--) {
+			std::cout << "[";
+			for (int j = 0; j < x - 1; j++) {
+				std::cout << grid[j][i] << ", ";
+			}
+			std::cout << grid[x - 1][i] << "]" << std::endl;
+		}
+		std::cout << "====================================================================================\n";
+	}
+
 	template<typename T>
 	T*** initMat3D(int m, int n, int l) {
 		T*** mat = new T**[m];
@@ -140,6 +153,8 @@ template double** SimUtil::initGrid2D<double>(int, int);
 template void SimUtil::deleteGrid2D<int>(int, int, int**);
 template void SimUtil::deleteGrid2D<float>(int, int, float**);
 template void SimUtil::deleteGrid2D<double>(int, int, double**);
+template void SimUtil::printGrid2D<int>(int, int, int**);
+template void SimUtil::printGrid2D<float>(int, int, float**);
 template int*** SimUtil::initMat3D<int>(int, int, int);
 template float*** SimUtil::initMat3D<float>(int, int, int);
 template double*** SimUtil::initMat3D<double>(int, int, int);

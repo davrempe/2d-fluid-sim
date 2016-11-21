@@ -94,6 +94,14 @@ namespace SimUtil {
 	grid - grid to delete
 	*/
 	template <typename T> void deleteGrid2D(int, int, T**);
+	/*
+	Prints the given grid to stdout.
+	Args:
+	x - x dimension width
+	n - y dimension height
+	T** - grid to print
+	*/
+	template <typename T> void printGrid2D(int, int, T**);
 
 	/*
 	Initializes a 3D matrix.
