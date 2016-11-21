@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <climits>
 
 #include "FluidSolver2d.h"
 #include "SimUtil.h"
@@ -61,8 +62,9 @@ void FluidSolver2D::step() {
 	// transfer particle vel to grid
 	particlesToGrid();
 	// extrapolate fluid data out one cell for accurate divergence calculations
-	extrapolateGridFluidData(1);
-
+	extrapolateGridFluidData(m_u, m_gridWidth + 1, m_gridHeight, 1);
+	extrapolateGridFluidData(m_v, m_gridWidth, m_gridHeight + 1, 1);
+	
 }
 
 void FluidSolver2D::saveParticleData(std::ofstream *particleOut) {
@@ -175,35 +177,17 @@ void FluidSolver2D::particlesToGrid() {
 		Particle2D curParticle = m_particles->at(p);
 		for (int i = 0; i < m_gridWidth + 1; i++) {
 			for (int j = 0; j < m_gridHeight + 1; j++) {
-				// see if velocity on edge of grid
-				// if it is we can't check the label at that point, must check the one previous
-				bool isFluid = false;
-				if (i == m_gridWidth || j == m_gridHeight) {
-					if (i == m_gridWidth && j == m_gridHeight) {
-						if (m_label[i - 1][j - 1] == FLUID) {
-							isFluid = true;
-						}
-					} else if (i == m_gridWidth) {
-						if (m_label[i - 1][j] == FLUID) {
-							isFluid = true;
-						}
-					} else if (j == m_gridHeight) {
-						if (m_label[i][j - 1] == FLUID) {
-							isFluid = true;
-						}
+				if (isFluid(i, j)) {
+					if (j < m_gridHeight) {
+						double kernel = trilinearHatKernel(sub(curParticle.pos, getGridCellPosition(i - 0.5f, j, m_dx)));
+						uNum[i][j] += curParticle.vel.x * kernel;
+						uDen[i][j] += kernel;
 					}
-				} else if (m_label[i][j] == FLUID) {
-					isFluid = true;
-				}
-
-				if (isFluid) {
-					double kernel = trilinearHatKernel(sub(curParticle.pos, getGridCellPosition(i - 0.5f, j, m_dx)));
-					uNum[i][j] += curParticle.vel.x * kernel;
-					uDen[i][j] += kernel;
-
-					kernel = trilinearHatKernel(sub(curParticle.pos, getGridCellPosition(i, j - 0.5f, m_dx)));
-					vNum[i][j] += curParticle.vel.y * kernel;
-					vDen[i][j] += kernel;
+					if (i < m_gridWidth) {
+						double kernel = trilinearHatKernel(sub(curParticle.pos, getGridCellPosition(i, j - 0.5f, m_dx)));
+						vNum[i][j] += curParticle.vel.y * kernel;
+						vDen[i][j] += kernel;
+					}
 				}
 			}
 		}
@@ -212,31 +196,13 @@ void FluidSolver2D::particlesToGrid() {
 	// additional pass over grid to divide and update actual velocities
 	for (int i = 0; i < m_gridWidth + 1; i++) {
 		for (int j = 0; j < m_gridHeight + 1; j++) {
-			bool isFluid = false;
-			if (i == m_gridWidth || j == m_gridHeight) {
-				if (i == m_gridWidth && j == m_gridHeight) {
-					if (m_label[i - 1][j - 1] == FLUID) {
-						isFluid = true;
-					}
+			if (isFluid(i, j)) {
+				if (j < m_gridHeight) {
+					m_u[i][j] = uNum[i][j] / uDen[i][j];
 				}
-				else if (i == m_gridWidth) {
-					if (m_label[i - 1][j] == FLUID) {
-						isFluid = true;
-					}
+				if (i < m_gridWidth) {
+					m_v[i][j] = vNum[i][j] / vDen[i][j];
 				}
-				else if (j == m_gridHeight) {
-					if (m_label[i][j - 1] == FLUID) {
-						isFluid = true;
-					}
-				}
-			}
-			else if (m_label[i][j] == FLUID) {
-				isFluid = true;
-			}
-
-			if (isFluid) {
-				m_u[i][j] = uNum[i][j] / uDen[i][j];
-				m_v[i][j] = vNum[i][j] / vDen[i][j];
 			}
 		}
 	}
@@ -248,15 +214,132 @@ void FluidSolver2D::particlesToGrid() {
 }
 
 /*
-Extrapolates the data (velocity) in fluid cells out using a breadth-first
+Extrapolates the data in fluid cells of the given grid out using a breadth-first
 search technique.
 Args:
+grid - the grid with data to extrapolate
+x, y - the grid dimensions
 depth - the number of cells away from fluid cells to extrapolate to.
 */
-void FluidSolver2D::extrapolateGridFluidData(int depth) {
-	// TODO
-	return;
+void FluidSolver2D::extrapolateGridFluidData(Mat2Df grid, int x, int y, int depth) {
+	// initialize marker array 
+	Mat2Di d = initGrid2D<int>(x, y);
+	// set d to 0 for known values, max int for unknown
+	for (int i = 0; i < x; i++) {
+		for (int j = 0; j < y; j++) {
+			if (isFluid(i, j)) {
+				d[i][j] = 0;
+			} else {
+				d[i][j] = INT_MAX;
+			}
+		}
+	}
+
+	// define neighbors
+	int numNeighbors = 8;
+	int neighbors[8][2] = {
+		{-1, 1}, // top left
+		{-1, 0}, // middle left
+		{-1, -1}, // bottom left
+		{0, 1}, // top middle
+		{0, -1}, // bottom middle
+		{1, 1}, // top right
+		{1, 0}, // middle right
+		{1, -1} // bottom right
+	};
+
+	// initialize first wavefront
+	std::vector<Vec2> W;
+	int dim[2] = { x, y };
+	for (int i = 0; i < x; i++) {
+		for (int j = 0; j < y; j++) {
+			// current value is not known
+			if (d[i][j] != 0) {
+				int ind[2] = { i, j };
+				if (checkNeighbors(d, dim, ind, neighbors, numNeighbors, 0)) {
+					// a neighbor is known
+					d[i][j] = 1;
+					W.push_back(Vec2(i, j));
+				}
+			}
+		}
+	}
+
+	// list of all wavefronts, only want to go through the given depth
+	std::vector<std::vector<Vec2>> wavefronts;
+	wavefronts.push_back(W);
+	int curWave = 0;
+	while (curWave < depth) {
+		// get wavefront
+		std::vector<Vec2> curW = wavefronts.at(curWave);
+		// initialize next wavefront
+		std::vector<Vec2> nextW;
+		// go through current wave and extrapolate values
+		for (int i = 0; i < curW.size(); i++) {
+			Vec2 ind = curW.at(i);
+			// average neighbors
+			float avg = 0.0f;
+			int numUsed = 0;
+			for (int i = 0; i < numNeighbors; i++) {
+				int offsetX = neighbors[i][0];
+				int offsetY = neighbors[i][1];
+				int neighborX = ind.x + offsetX;
+				int neighborY = ind.y + offsetY;
+
+				// make sure valid indices
+				if ((neighborX >= 0 && neighborX < dim[0]) && (neighborY >= 0 && neighborY < dim[1])) {
+					// only want to add to average if neighbor d is less than current d
+					if (d[neighborX][neighborY] < d[(int)ind.x][(int)ind.y]) {
+						avg += grid[neighborX][neighborY];
+						numUsed++;
+					} else if (d[neighborX][neighborY] == INT_MAX) {
+						d[neighborX][neighborY] = d[(int)ind.x][(int)ind.y] + 1;
+						nextW.push_back(Vec2(neighborX, neighborY));
+					}
+				}
+			}
+
+			avg /= numUsed;
+			// set current value to average of neighbors
+			grid[(int)ind.x][(int)ind.y] = avg;
+		}
+
+		// push next wave to list
+		wavefronts.push_back(nextW);
+		curWave++;
+	}
+	
 }
+
+/*
+Checks neighbors of the given index in the given grid for the given value. Returns true if
+any neighbor has that value, and false otherwise.
+Args
+grid - the 2D grid to look in
+dim - the grid dimensions [x y]
+index - the (i, j) index of the cell to look around
+neighbors - the definintion of neighbors, this is a n x 2 array where each row is a pair of offsets from the index of interest
+numNeighbors - the number of neighbors
+value - the value to look for
+*/
+bool FluidSolver2D::checkNeighbors(Mat2Di grid, int dim[2], int index[2], int neighbors[][2], int numNeighbors, int value) {
+	for (int i = 0; i < numNeighbors; i++) {
+		int offsetX = neighbors[i][0];
+		int offsetY = neighbors[i][1];
+		int neighborX = index[0] + offsetX;
+		int neighborY = index[1] + offsetY;
+
+		// make sure valid indices
+		if ((neighborX >= 0 && neighborX < dim[0]) && (neighborY >= 0 && neighborY < dim[1])) {
+			if (grid[neighborX][neighborY] == value) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 
 /*
 Returns the value of the trilinear hat function for the given
@@ -288,5 +371,40 @@ double FluidSolver2D::quadBSplineKernel(SimUtil::Vec2) {
 	return 0;
 }
 
+/*
+Determines if the given grid cell is considered a fluid based on the label grid. Also takes
+into account velocity components on the edge of the grid. For example, if the index passed in
+is one cell outside the label grid, it is assumed to be a velocity component index, and whether the cell is
+fluid or not is determined by the cell that it borders. Otherwise false is returned.
+Args
+i - x cell index
+j - y cell index
+*/
+bool FluidSolver2D::isFluid(int i, int j) {
+	bool isFluid = false;
+	// see if velocity on edge of grid
+	// if it is we can't check the label at that point, must check the one previous
+	if (i == m_gridWidth || j == m_gridHeight) {
+		// i and j should never both be out of label range
+		// should only happen in one dimension because of vel comp grids
+		if (i == m_gridWidth && j == m_gridHeight) {
+			isFluid = false;
+		}
+		else if (i == m_gridWidth) {
+			if (m_label[i - 1][j] == FLUID) {
+				isFluid = true;
+			}
+		}
+		else if (j == m_gridHeight) {
+			if (m_label[i][j - 1] == FLUID) {
+				isFluid = true;
+			}
+		}
+	}
+	else if (m_label[i][j] == FLUID) {
+		isFluid = true;
+	}
 
+	return isFluid;
+}
 

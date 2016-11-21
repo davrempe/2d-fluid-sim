@@ -3,7 +3,7 @@
 FluidSim2D/Debug/*
 FluidSim2D/FluidSim2D/Debug/*
 FluidSim2D/.vs/*
-FluidSim2D/FluidSime2D/*.csv
+FluidSim2D/FluidSim2D/*.csv
 
 # Compiled Object files
 *.slo

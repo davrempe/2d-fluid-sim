@@ -59,12 +59,14 @@ private:
 	void seedParticles(int, std::vector<SimUtil::Particle2D>*);
 	void labelGrid();
 	void particlesToGrid();
-	void extrapolateGridFluidData(int);
+	void extrapolateGridFluidData(SimUtil::Mat2Df, int, int, int);
 
 	// helper functions
 	double trilinearHatKernel(SimUtil::Vec2);
 	double hatFunction(double);
 	double quadBSplineKernel(SimUtil::Vec2);
+	bool isFluid(int, int);
+	bool checkNeighbors(SimUtil::Mat2Di, int[2], int[2], int[][2], int, int);
 
 public:
 	/*
