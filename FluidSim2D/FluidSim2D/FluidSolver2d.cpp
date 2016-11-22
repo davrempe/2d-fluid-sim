@@ -3,7 +3,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
-#include <climits>
 
 #include "FluidSolver2d.h"
 #include "SimUtil.h"
@@ -54,6 +53,12 @@ void FluidSolver2D::init(std::string initialGeometryFile){
 	m_v = initGrid2D<float>(m_gridWidth, m_gridHeight + 1);
 	m_vSaved = initGrid2D<float>(m_gridWidth, m_gridHeight + 1);
 
+	// init vel grids with unknown label value
+	initVelGrid(m_u, m_gridWidth + 1, m_gridHeight, VEL_UNKNOWN);
+	initVelGrid(m_v, m_gridWidth, m_gridHeight + 1, VEL_UNKNOWN);
+	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
+	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
+
 	// read in initial geometry to populate label grid
 	readInGeom(m_gridWidth, m_gridHeight, initialGeometryFile, m_label);
 	if (DEBUG) printGrid2D<int>(m_gridWidth, m_gridHeight, m_label);
@@ -77,6 +82,16 @@ void FluidSolver2D::step() {
 	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
 	// save copy of current grid velocities for FLIP update
 	saveVelocityGrids();
+	// apply body forces on grid (gravity)
+	applyBodyForces();
+	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
+	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
+	// solve for pressure
+
+	// transfer grid velocities back to particles
+	// TODO before pressure so we can visualize forces while writing pressure code
+	// advect particles
+	// TODO before pressure so we can visualize forces while writing pressure code
 }
 
 void FluidSolver2D::saveParticleData(std::ofstream *particleOut) {
@@ -341,9 +356,50 @@ void FluidSolver2D::saveVelocityGrids() {
 	}
 }
 
+/*
+Applies the force of gravity to velocity field on the grid
+*/
+void FluidSolver2D::applyBodyForces() {
+	// traverse all grid cells and apply force to each velocity componente
+	// The new velocity is calculated using forward euler
+	for (int i = 0; i < m_gridWidth + 1; i++) {
+		for (int j = 0; j < m_gridHeight + 1; j++) {
+			if (j < m_gridHeight) {
+				// make sure we know the velocity
+				if (m_u[i][j] != VEL_UNKNOWN) {
+					// update u component
+					m_u[i][j] += m_dt*GRAVITY.x;
+				}
+			}
+			if (i < m_gridWidth) {
+				if (m_v[i][j] != VEL_UNKNOWN) {
+					// update v component
+					m_v[i][j] += m_dt*GRAVITY.y;
+				}
+			}
+		}
+	}
+}
+
+
 //----------------------------------------------------------------------
 // Private Helper Functions
 //----------------------------------------------------------------------
+
+/*
+Populates the given grid with the value given.
+Args:
+grid - the grid to fill
+x/y - the dimensions of the grid
+value - the value to fill it with
+*/
+void FluidSolver2D::initVelGrid(SimUtil::Mat2Df grid, int x, int y, float value) {
+	for (int i = 0; i < x; i++) {
+		for (int j = 0; j < y; j++) {
+			grid[i][j] = value;
+		}
+	}
+}
 
 /*
 Checks neighbors of the given index in the given grid for the given value. Returns true if

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <climits>
 
 #include "SimUtil.h"
 
@@ -43,8 +44,11 @@ private:
 	// Simulation Attributes
 	//----------------------------------------------------------------------
 
+	const int VEL_UNKNOWN = INT_MIN;
 	// number of particles to seed in each cell at start of sim
 	const int PARTICLES_PER_CELL = 4;
+	// acceleration due to gravity
+	const SimUtil::Vec2 GRAVITY = { 0.0f, -9.81f };
 	// simulation time step
 	float m_dt;
 
@@ -66,8 +70,10 @@ private:
 	void particlesToGrid();
 	void extrapolateGridFluidData(SimUtil::Mat2Df, int, int, int);
 	void saveVelocityGrids();
+	void applyBodyForces();
 
 	// helper functions
+	void initVelGrid(SimUtil::Mat2Df, int, int, float);
 	double trilinearHatKernel(SimUtil::Vec2);
 	double hatFunction(double);
 	double quadBSplineKernel(SimUtil::Vec2);
