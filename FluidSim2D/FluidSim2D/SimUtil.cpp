@@ -128,12 +128,28 @@ namespace SimUtil {
 		return index;
 	}
 
+	Vec2 add(Vec2 vec1, Vec2 vec2) {
+		return Vec2(vec1.x + vec2.x, vec1.y + vec2.y);
+	}
+
+	Vec3 add(Vec3 vec1, Vec3 vec2) {
+		return Vec3(vec1.x + vec2.x, vec1.y + vec2.y, vec1.z + vec2.z);
+	}
+
 	Vec2 sub(Vec2 vec1, Vec2 vec2) {
 		return Vec2(vec1.x - vec2.x, vec1.y - vec2.y);
 	}
 	
 	Vec3 sub(Vec3 vec1, Vec3 vec2) {
 		return Vec3(vec1.x - vec2.x, vec1.y - vec2.y, vec1.z - vec2.z);
+	}
+
+	Vec2 scale(Vec2 vec1, float scalar) {
+		return Vec2(scalar * vec1.x, scalar * vec1.y);
+	}
+
+	Vec3 scale(Vec3 vec1, float scalar) {
+		return Vec3(scalar * vec1.x, scalar * vec1.y, scalar * vec1.z);
 	}
 
 }

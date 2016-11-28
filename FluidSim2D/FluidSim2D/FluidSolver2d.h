@@ -47,6 +47,8 @@ private:
 	const int VEL_UNKNOWN = INT_MIN;
 	// number of particles to seed in each cell at start of sim
 	const int PARTICLES_PER_CELL = 4;
+	// the amount of weight to give to PIC in PIC/FLIP update
+	const float PIC_WEIGHT = 0.2;
 	// acceleration due to gravity
 	const SimUtil::Vec2 GRAVITY = { 0.0f, -9.81f };
 	// simulation time step
@@ -71,6 +73,9 @@ private:
 	void extrapolateGridFluidData(SimUtil::Mat2Df, int, int, int);
 	void saveVelocityGrids();
 	void applyBodyForces();
+	// pressure stuff
+	void gridToParticles(float);
+	void advectParticles();
 
 	// helper functions
 	void initVelGrid(SimUtil::Mat2Df, int, int, float);
@@ -79,6 +84,7 @@ private:
 	double quadBSplineKernel(SimUtil::Vec2);
 	bool isFluid(int, int);
 	bool checkNeighbors(SimUtil::Mat2Di, int[2], int[2], int[][2], int, int);
+	SimUtil::Vec2 interpVel(SimUtil::Mat2Df, SimUtil::Mat2Df, SimUtil::Vec2);
 
 public:
 	/*

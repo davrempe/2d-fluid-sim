@@ -89,7 +89,7 @@ void FluidSolver2D::step() {
 	// solve for pressure
 
 	// transfer grid velocities back to particles
-	// TODO before pressure so we can visualize forces while writing pressure code
+	gridToParticles(PIC_WEIGHT);
 	// advect particles
 	// TODO before pressure so we can visualize forces while writing pressure code
 }
@@ -381,6 +381,48 @@ void FluidSolver2D::applyBodyForces() {
 	}
 }
 
+/*
+Transfer the velocities from the grid back to the particles. This is done
+with a PIC/FLIP mix, where the PIC update has a weight of the given alpha.
+Args:
+alpha - weight in the update for PIC, should be in [0, 1]. Then the FLIP update is weighted (1 - alpha).
+*/
+void FluidSolver2D::gridToParticles(float alpha) {
+	// build grid for change in velocity to use for FLIP update
+	Mat2Df duGrid = initGrid2D<float>(m_gridWidth + 1, m_gridHeight);
+	Mat2Df dvGrid = initGrid2D<float>(m_gridWidth, m_gridHeight + 1);
+	// calc u grid
+	for (int i = 0; i < m_gridWidth + 1; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			duGrid[i][j] = m_u[i][j] - m_uSaved[i][j];
+		}
+	}
+	// calc v grid
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight + 1; j++) {
+			dvGrid[i][j] = m_v[i][j] - m_vSaved[i][j];
+		}
+	}
+
+	// go through particles and interpolate each velocity component
+	// the update is a PIC/FLIP mix weighted with alpha
+	// alpha = 1.0 is entirely PIC, alpha = 0.0 is all FLIP
+	for (int i = 0; i < m_particles->size(); i++) {
+		Particle2D curParticle = m_particles->at(i);
+		Vec2 picInterp = interpVel(m_u, m_v, curParticle.pos);
+		Vec2 flipInterp = interpVel(duGrid, dvGrid, curParticle.pos);
+		// u_new = alpha * interp(u_gridNew, x_p) + (1 - alpha) * (u_pOld + interp(u_dGrid, x_p))
+		curParticle.vel = add(scale(picInterp, alpha), scale(add(curParticle.vel, flipInterp), 1 - alpha));
+	}
+
+	deleteGrid2D<float>(m_gridWidth + 1, m_gridHeight, duGrid);
+	deleteGrid2D<float>(m_gridWidth, m_gridHeight + 1, dvGrid);
+}
+
+void FluidSolver2D::advectParticles() {
+
+}
+
 
 //----------------------------------------------------------------------
 // Private Helper Functions
@@ -460,6 +502,38 @@ double FluidSolver2D::quadBSplineKernel(SimUtil::Vec2) {
 	// TODO
 	return 0;
 }
+
+/*
+Interpolates the value in the given velocity grid at the given position using bilinear interpolation.
+Args:
+uGrid - the u component grid to interpolate from
+vGrid - the v component grid to interpolate from
+pos - the position to interpolate at
+*/
+Vec2 FluidSolver2D::interpVel(SimUtil::Mat2Df uGrid, SimUtil::Mat2Df vGrid, Vec2 pos) {
+	// get grid cell containing position
+	int *cell = getGridCellIndex(pos, m_dx);
+	int i = cell[0];
+	int j = cell[1];
+	// get positions of u and v component stored on each side of cell
+	Vec2 cellLoc = getGridCellPosition(i, j, m_dx);
+	float offset = m_dx / 2.0f;
+	float x1 = cellLoc.x - offset;
+	float x2 = cellLoc.x + offset;
+	float y1 = cellLoc.y - offset;
+	float y2 = cellLoc.y + offset;
+	// get actual values at these positions
+	float u1 = uGrid[i][j];
+	float u2 = uGrid[i + 1][j];
+	float v1 = vGrid[i][j];
+	float v2 = vGrid[i][j + 1];
+
+	// the interpolated values
+	float u = ((x2 - pos.x) / (x2 - x1)) * u1 + ((pos.x - x1) / (x2 - x1)) * u2;
+	float v = ((y2 - pos.y) / (y2 - y1)) * v1 + ((pos.y - y1) / (y2 - y1)) * v2;
+	return Vec2(u, v);
+}
+
 
 /*
 Determines if the given grid cell is considered a fluid based on the label grid. Also takes

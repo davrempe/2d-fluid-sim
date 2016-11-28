@@ -182,6 +182,20 @@ namespace SimUtil {
 	// vec operations
 
 	/*
+	Calculates the sum of vec1 and vec2 (vec1 + vec2) and returns a new vector containing this subtraction.
+	Args
+	vec1 - first vector
+	vec2 - second vector
+	*/
+	Vec2 add(Vec2, Vec2);
+	/*
+	Calculates the sum of vec1 and vec2 (vec1 + vec2) and returns a new vector containing this subtraction.
+	Args
+	vec1 - first vector
+	vec2 - second vector
+	*/
+	Vec3 add(Vec3, Vec3);
+	/*
 	Calculates the difference of vec1 and vec2 (vec1 - vec2) and returns a new vector containing this subtraction.
 	Args
 	vec1 - first vector
@@ -195,6 +209,20 @@ namespace SimUtil {
 	vec2 - second vector
 	*/
 	Vec3 sub(Vec3, Vec3);
+	/*
+	Scales the given vector by a scalar and returns the new scaled vector. 
+	Args
+	vec1 - the vector
+	scalar - the value to scale by
+	*/
+	Vec2 scale(Vec2, float);
+	/*
+	Scales the given vector by a scalar and returns the new scaled vector.
+	Args
+	vec1 - the vector
+	scalar - the value to scale by
+	*/
+	Vec3 scale(Vec3, float);
 }
 
 #endif //SIM_UTIL_H
