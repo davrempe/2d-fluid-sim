@@ -9,6 +9,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <cmath>
 
 #include "FluidSolver2d.h"
 #include "FluidRenderer2d.h"
@@ -33,7 +34,7 @@ const int GRID_HEIGHT = 50;
 // grid cell width (in meters)
 const float GRID_CELL_WIDTH = 0.005f;
 // simulation time step (in seconds)
-const float TIME_STEP = 0.04f;
+const float TIME_STEP = 0.02f;
 
 //----------------------------------------------------------------------
 // I/O Parameters
@@ -78,7 +79,7 @@ int main(int argc, char** argv) {
 
 			t += TIME_STEP;
 			// check if need to output data to render at current time
-			if (t - (framesOut * FRAME_TIME_STEP) <= 0.000001f) {
+			if (abs(t - (framesOut * FRAME_TIME_STEP)) <= 0.000001f) {
 				solver.saveParticleData(particleOut);
 				framesOut++;
 			}

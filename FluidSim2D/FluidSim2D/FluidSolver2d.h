@@ -49,6 +49,8 @@ private:
 	const int PARTICLES_PER_CELL = 4;
 	// the amount of weight to give to PIC in PIC/FLIP update
 	const float PIC_WEIGHT = 0.2;
+	// the maximum number of grid cells a particle should move when advected
+	const int ADVECT_MAX = 1;
 	// acceleration due to gravity
 	const SimUtil::Vec2 GRAVITY = { 0.0f, -9.81f };
 	// simulation time step
@@ -75,7 +77,8 @@ private:
 	void applyBodyForces();
 	// pressure stuff
 	void gridToParticles(float);
-	void advectParticles();
+	void advectParticles(int);
+	void cleanupParticles(float);
 
 	// helper functions
 	void initVelGrid(SimUtil::Mat2Df, int, int, float);
@@ -85,6 +88,7 @@ private:
 	bool isFluid(int, int);
 	bool checkNeighbors(SimUtil::Mat2Di, int[2], int[2], int[][2], int, int);
 	SimUtil::Vec2 interpVel(SimUtil::Mat2Df, SimUtil::Mat2Df, SimUtil::Vec2);
+	void RK3(SimUtil::Particle2D*, SimUtil::Vec2, float, SimUtil::Mat2Df, SimUtil::Mat2Df);
 
 public:
 	/*

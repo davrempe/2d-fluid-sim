@@ -223,6 +223,18 @@ namespace SimUtil {
 	scalar - the value to scale by
 	*/
 	Vec3 scale(Vec3, float);
+	/*
+	Calculates Euclidean norm of the given vector.
+	Args
+	vec - the vector to calculate norm of.
+	*/
+	float norm(Vec2);
+	/*
+	Calculates Euclidean norm of the given vector.
+	Args
+	vec - the vector to calculate norm of.
+	*/
+	float norm(Vec3);
 }
 
 #endif //SIM_UTIL_H

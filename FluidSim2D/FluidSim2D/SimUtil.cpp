@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <cmath>
 
 namespace SimUtil {
 
@@ -150,6 +151,14 @@ namespace SimUtil {
 
 	Vec3 scale(Vec3 vec1, float scalar) {
 		return Vec3(scalar * vec1.x, scalar * vec1.y, scalar * vec1.z);
+	}
+
+	float norm(Vec2 vec) {
+		return sqrt(vec.x * vec.x + vec.y * vec.y);
+	}
+
+	float norm(Vec3 vec) {
+		return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 	}
 
 }

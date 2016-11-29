@@ -76,8 +76,8 @@ void FluidSolver2D::step() {
 	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
 	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
 	// extrapolate fluid data out one cell for accurate divergence calculations
-	extrapolateGridFluidData(m_u, m_gridWidth + 1, m_gridHeight, 1);
-	extrapolateGridFluidData(m_v, m_gridWidth, m_gridHeight + 1, 1);
+	extrapolateGridFluidData(m_u, m_gridWidth + 1, m_gridHeight, 2);
+	extrapolateGridFluidData(m_v, m_gridWidth, m_gridHeight + 1, 2);
 	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
 	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
 	// save copy of current grid velocities for FLIP update
@@ -91,17 +91,23 @@ void FluidSolver2D::step() {
 	// transfer grid velocities back to particles
 	gridToParticles(PIC_WEIGHT);
 	// advect particles
-	// TODO before pressure so we can visualize forces while writing pressure code
+	advectParticles(ADVECT_MAX);
+	// detect particles that have penetrated solid boundary and move back inside fluid
+	cleanupParticles(m_dx / 4.0f);
 }
 
 void FluidSolver2D::saveParticleData(std::ofstream *particleOut) {
 	if (particleOut->is_open()) {
 		// print out all particle data on same line, each pos separated by ","
 		size_t numParticles = m_particles->size();
-		for (int i = 0; i < numParticles - 1; i++) {
-			(*particleOut) << m_particles->at(i).pos.x << " " << m_particles->at(i).pos.y << ",";
+		if (numParticles > 0) {
+			for (int i = 0; i < numParticles - 1; i++) {
+				(*particleOut) << m_particles->at(i).pos.x << " " << m_particles->at(i).pos.y << ",";
+			}
+			(*particleOut) << m_particles->at(numParticles - 1).pos.x << " " << m_particles->at(numParticles - 1).pos.y << "\n";
+		} else {
+			(*particleOut) << "\n";
 		}
-		(*particleOut) << m_particles->at(numParticles - 1).pos.x << " " << m_particles->at(numParticles - 1).pos.y << "\n";
 	}
 }
 
@@ -408,20 +414,79 @@ void FluidSolver2D::gridToParticles(float alpha) {
 	// the update is a PIC/FLIP mix weighted with alpha
 	// alpha = 1.0 is entirely PIC, alpha = 0.0 is all FLIP
 	for (int i = 0; i < m_particles->size(); i++) {
-		Particle2D curParticle = m_particles->at(i);
-		Vec2 picInterp = interpVel(m_u, m_v, curParticle.pos);
-		Vec2 flipInterp = interpVel(duGrid, dvGrid, curParticle.pos);
+		Particle2D *curParticle = &(m_particles->at(i));
+		Vec2 picInterp = interpVel(m_u, m_v, curParticle->pos);
+		Vec2 flipInterp = interpVel(duGrid, dvGrid, curParticle->pos);
 		// u_new = alpha * interp(u_gridNew, x_p) + (1 - alpha) * (u_pOld + interp(u_dGrid, x_p))
-		curParticle.vel = add(scale(picInterp, alpha), scale(add(curParticle.vel, flipInterp), 1 - alpha));
+		curParticle->vel = add(scale(picInterp, alpha), scale(add(curParticle->vel, flipInterp), 1 - alpha));
 	}
 
 	deleteGrid2D<float>(m_gridWidth + 1, m_gridHeight, duGrid);
 	deleteGrid2D<float>(m_gridWidth, m_gridHeight + 1, dvGrid);
 }
 
-void FluidSolver2D::advectParticles() {
+/*
+Advects the particles through the current velocity field using a Runge-Kutta 3 method.
+This uses substeps so that the particles are never advected greater than C*dx in a single
+substep.
+Args:
+C - the maximum number of grid cells a particle should move when advected. This helps define substep sizes. 
+*/
+void FluidSolver2D::advectParticles(int C) {
+	for (int i = 0; i < m_particles->size(); i++) {
+		Particle2D *curParticle = &(m_particles->at(i));
+		float subTime = 0;
+		bool finished = false;
+		while (!finished) {
+			if (curParticle->pos.x < 0 || curParticle->pos.y < 0) {
+				// there's been an error in RK3, just skip it
+				std::cout << "RK3 error...skipping particle" << std::endl;
+				break;
+			}
+			Vec2 curVel = interpVel(m_u, m_v, curParticle->pos);
+			// calc max substep size
+			float dT = (C * m_dx) / (norm(curVel) + FLT_MIN);
+			// update substep time so we don't go past normal time step
+			if (subTime + dT >= m_dt) {
+				dT = m_dt - subTime;
+				finished = true;
+			} else if (subTime + 2 * dT >= m_dt) {
+				dT = 0.5f * (m_dt - subTime);
+			}
 
+			RK3(curParticle, curVel, dT, m_u, m_v);
+			subTime += dT;
+		}
+	}
 }
+
+/*
+Finds particles that have traveled into solid boundaries and projects them back into the fluid region. 
+They will be put at the closest boundary + the given dx into the fluid.
+Args
+dx - the amount to project stray particles away from the wall.
+*/
+void FluidSolver2D::cleanupParticles(float dx) {
+	int i = 0;
+	bool finished = false;
+	while(!finished && m_particles->size() > 0) {
+		int *cell = getGridCellIndex(m_particles->at(i).pos, m_dx);
+		// if either of cells are negative or greater than sim dimensions it has left sim area
+		if (cell[0] < 0 || cell[1] < 0 || cell[0] >= m_gridWidth || cell[1] >= m_gridHeight) {
+			m_particles->erase(m_particles->begin() + i);
+		} else if (m_label[cell[0]][cell[1]] == SOLID) {
+			// TODO project back into fluid
+			// for now just delete
+			m_particles->erase(m_particles->begin() + i);
+		} else {
+			i++;
+			if (i >= m_particles->size()) {
+				finished = true;
+			}
+		}
+	}
+}
+
 
 
 //----------------------------------------------------------------------
@@ -505,6 +570,7 @@ double FluidSolver2D::quadBSplineKernel(SimUtil::Vec2) {
 
 /*
 Interpolates the value in the given velocity grid at the given position using bilinear interpolation.
+Returns velocity unkown if position is not on simulation grid. 
 Args:
 uGrid - the u component grid to interpolate from
 vGrid - the v component grid to interpolate from
@@ -515,23 +581,51 @@ Vec2 FluidSolver2D::interpVel(SimUtil::Mat2Df uGrid, SimUtil::Mat2Df vGrid, Vec2
 	int *cell = getGridCellIndex(pos, m_dx);
 	int i = cell[0];
 	int j = cell[1];
-	// get positions of u and v component stored on each side of cell
-	Vec2 cellLoc = getGridCellPosition(i, j, m_dx);
-	float offset = m_dx / 2.0f;
-	float x1 = cellLoc.x - offset;
-	float x2 = cellLoc.x + offset;
-	float y1 = cellLoc.y - offset;
-	float y2 = cellLoc.y + offset;
-	// get actual values at these positions
-	float u1 = uGrid[i][j];
-	float u2 = uGrid[i + 1][j];
-	float v1 = vGrid[i][j];
-	float v2 = vGrid[i][j + 1];
+	// make sure this is a valid index
+	if (i >= 0 && i < m_gridWidth && j >= 0 && j < m_gridHeight) {
+		// get positions of u and v component stored on each side of cell
+		Vec2 cellLoc = getGridCellPosition(i, j, m_dx);
+		float offset = m_dx / 2.0f;
+		float x1 = cellLoc.x - offset;
+		float x2 = cellLoc.x + offset;
+		float y1 = cellLoc.y - offset;
+		float y2 = cellLoc.y + offset;
+		// get actual values at these positions
+		float u1 = uGrid[i][j];
+		float u2 = uGrid[i + 1][j];
+		float v1 = vGrid[i][j];
+		float v2 = vGrid[i][j + 1];
 
-	// the interpolated values
-	float u = ((x2 - pos.x) / (x2 - x1)) * u1 + ((pos.x - x1) / (x2 - x1)) * u2;
-	float v = ((y2 - pos.y) / (y2 - y1)) * v1 + ((pos.y - y1) / (y2 - y1)) * v2;
-	return Vec2(u, v);
+		// the interpolated values
+		float u = ((x2 - pos.x) / (x2 - x1)) * u1 + ((pos.x - x1) / (x2 - x1)) * u2;
+		float v = ((y2 - pos.y) / (y2 - y1)) * v1 + ((pos.y - y1) / (y2 - y1)) * v2;
+		return Vec2(u, v);
+	} else {
+		return Vec2(VEL_UNKNOWN, VEL_UNKNOWN);
+	}
+}
+
+/*
+Advects a particle using Runge-Kutta 3 through the given velocity field.
+Args:
+particle - the particle to advect
+initVel - the particles initial velocity in the current field, can leave UNKNOWN
+dt - the time step
+uGrid/vGrid - the velocity grids to advect through
+*/
+void FluidSolver2D::RK3(SimUtil::Particle2D *particle, SimUtil::Vec2 initVel, float dt, SimUtil::Mat2Df uGrid, SimUtil::Mat2Df vGrid) {
+	if (initVel.x == VEL_UNKNOWN && initVel.y == VEL_UNKNOWN) {
+		initVel = interpVel(uGrid, vGrid, particle->pos);
+	}
+
+	Vec2 k1 = initVel;
+	Vec2 k2 = interpVel(uGrid, vGrid, add(particle->pos, scale(k1, 0.5f*dt)));
+	Vec2 k3 = interpVel(uGrid, vGrid, add(particle->pos, scale(k2, 0.75f*dt)));
+	k1 = scale(k1, (2.0f / 9.0f)*dt);
+	k2 = scale(k2, (3.0f / 9.0f)*dt);
+	k3 = scale(k3, (4.0f / 9.0f)*dt);
+
+	particle->pos = add(particle->pos, add(k1, add(k2, k3)));
 }
 
 
