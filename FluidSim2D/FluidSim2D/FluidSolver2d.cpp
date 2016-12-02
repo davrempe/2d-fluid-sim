@@ -87,7 +87,9 @@ void FluidSolver2D::step() {
 	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
 	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
 	// solve for pressure
-
+	pressureSolve();
+	// apply pressure force
+	applyPressure();
 	// transfer grid velocities back to particles
 	gridToParticles(PIC_WEIGHT);
 	// advect particles
@@ -388,6 +390,37 @@ void FluidSolver2D::applyBodyForces() {
 }
 
 /*
+Solves for pressure using the current velocity field.
+*/
+void FluidSolver2D::pressureSolve() {
+	// initialize all grids to solve for pressure
+	// using double for more accuracy
+	Mat2Dd rhs = initGrid2D<double>(m_gridWidth, m_gridHeight);
+	// TODO calc RHS
+	Mat2Dd Adiag = initGrid2D<double>(m_gridWidth, m_gridHeight);
+	Mat2Dd Ax = initGrid2D<double>(m_gridWidth, m_gridHeight);
+	Mat2Dd Ay = initGrid2D<double>(m_gridWidth, m_gridHeight);
+	// TODO set up A
+	Mat2Dd precon = initGrid2D<double>(m_gridWidth, m_gridHeight);
+	// TODO construct preconditioner
+
+	// TODO run PCG
+
+	// cleanup
+	deleteGrid2D<double>(m_gridWidth, m_gridHeight, rhs);
+	deleteGrid2D<double>(m_gridWidth, m_gridHeight, Adiag);
+	deleteGrid2D<double>(m_gridWidth, m_gridHeight, Ax);
+	deleteGrid2D<double>(m_gridWidth, m_gridHeight, Ay);
+}
+
+/*
+Applies the pressure force to the current velocity field.
+*/
+void FluidSolver2D::applyPressure() {
+	// TODO
+}
+
+/*
 Transfer the velocities from the grid back to the particles. This is done
 with a PIC/FLIP mix, where the PIC update has a weight of the given alpha.
 Args:
@@ -626,6 +659,75 @@ void FluidSolver2D::RK3(SimUtil::Particle2D *particle, SimUtil::Vec2 initVel, fl
 	k3 = scale(k3, (4.0f / 9.0f)*dt);
 
 	particle->pos = add(particle->pos, add(k1, add(k2, k3)));
+}
+
+/*
+Sets up the right hand side of the system to solve for pressure. This is the negative
+divergence at each cell center modified to account for the velocity of solids at boundaries.
+Args:
+rhs - the grid to use for the RHS
+*/
+void FluidSolver2D::constructRHS(Mat2Dd rhs) {
+	// TODO
+}
+
+/*
+Constructs the A matrix for the system to solve for pressure. This a sparse coefficient matrix
+for the pressure terms, stored in 3 separate grids.
+Args:
+Adiag - grid to store the diagonal of the matrix in.
+Ax - grid to store the coefficients for pressure in the (i+1) cell for each grid cell with x index i
+Ay - grid to store the coefficients for pressure in the (j+1) cell for each grid cell with y index j
+*/
+void FluidSolver2D::constructA(Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
+	// TODO
+}
+
+/*
+Constructs the preconditioner used when performing the preconditioned conjugate gradient (PCG)
+algorithm to solve for pressure.
+Args:
+precon - grid to store the preconditioner in
+Adiag, Ax, Ay - the grids that make up the A coefficient matrix
+*/
+void FluidSolver2D::constructPrecon(Mat2Dd precon, Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
+	// TODO
+}
+
+/*
+Performs the Modified Incomplete Cholesky Conjugate Gradient Level Zero 
+(preconditioned conjugate gradient, PCG) algorithm to solve the linear system
+Ap = b for p. The result are placed on the pressure grid.
+Args:
+Adiag, Ax, Ay - the grids that make up the A coefficient matrix
+b - the right hand side of the equation
+precon - the preconditioner to use
+*/
+void FluidSolver2D::PCG(Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay, Mat2Dd b, Mat2Dd precon) {
+	// TODO
+}
+
+/*
+Applies the given preconditioner to the given vector and places the result in given "vector" z.
+Args:
+z - the vector (2D grid) to place the result in
+r - the vector (2D grid) to multiply the preconditioner by
+precon - the preconditioner
+Adiag, Ax, Ay - the grids that make up the coefficient matrix
+*/
+void FluidSolver2D::applyPrecon(Mat2Dd z, Mat2Dd r, Mat2Dd precon, Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
+	// TODO
+}
+
+/*
+Multiplies A by the given vector (a 2D grid).
+Args:
+z - the vector (2D grid) to place the result in
+s - the vector (2D grid) to multiply A by
+Adiag, Ax, Ay - the grids that make up the coefficient matrix A
+*/
+void FluidSolver2D::applyA(Mat2Dd z, Mat2Dd s, Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
+	// TODO
 }
 
 

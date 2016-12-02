@@ -35,6 +35,8 @@ private:
 	// grid of vel y component, size (nx, ny+1)
 	SimUtil::Mat2Df m_v;
 
+	// TODO grids for solid velocity?
+
 	// saved grid of vel x component for FLIP update, size (nx+1, ny)
 	SimUtil::Mat2Df m_uSaved;
 	// saved grid of vel y component for FLIP update, size (nx, ny+1)
@@ -53,6 +55,8 @@ private:
 	const int ADVECT_MAX = 1;
 	// acceleration due to gravity
 	const SimUtil::Vec2 GRAVITY = { 0.0f, -9.81f };
+	// density of the fluid (kg/m^3)
+	const float FLUID_DENSITY = 1000;
 	// simulation time step
 	float m_dt;
 
@@ -75,7 +79,8 @@ private:
 	void extrapolateGridFluidData(SimUtil::Mat2Df, int, int, int);
 	void saveVelocityGrids();
 	void applyBodyForces();
-	// pressure stuff
+	void pressureSolve();
+	void applyPressure();
 	void gridToParticles(float);
 	void advectParticles(int);
 	void cleanupParticles(float);
@@ -89,6 +94,12 @@ private:
 	bool checkNeighbors(SimUtil::Mat2Di, int[2], int[2], int[][2], int, int);
 	SimUtil::Vec2 interpVel(SimUtil::Mat2Df, SimUtil::Mat2Df, SimUtil::Vec2);
 	void RK3(SimUtil::Particle2D*, SimUtil::Vec2, float, SimUtil::Mat2Df, SimUtil::Mat2Df);
+	void constructRHS(SimUtil::Mat2Dd);
+	void constructA(SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd);
+	void constructPrecon(SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd);
+	void PCG(SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd);
+	void applyPrecon(SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd);
+	void applyA(SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd);
 
 public:
 	/*

@@ -235,6 +235,14 @@ namespace SimUtil {
 	vec - the vector to calculate norm of.
 	*/
 	float norm(Vec3);
+	/*
+	Calculates the dot product of two vectors being stored
+	as 2D grids (grid1 dot grid2).
+	Args:
+	grid1 - the first vector (2D grid)
+	grid2 - the second vector (2D grid)
+	*/
+	template <typename T> double dot(T**, T**);
 }
 
 #endif //SIM_UTIL_H

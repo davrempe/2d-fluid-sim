@@ -161,6 +161,12 @@ namespace SimUtil {
 		return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 	}
 
+	template <typename T>
+	double dot(T** grid1, T** grid2) {
+		// TODO
+		return 0.0;
+	}
+
 }
 
 // explicit instantiation of template functions for compilation
@@ -192,3 +198,7 @@ template double*** SimUtil::initGrid3D<double>(int, int, int);
 template void SimUtil::deleteGrid3D<int>(int, int, int, int***);
 template void SimUtil::deleteGrid3D<float>(int, int, int, float***);
 template void SimUtil::deleteGrid3D<double>(int, int, int, double***);
+
+template double SimUtil::dot(int**, int**);
+template double SimUtil::dot(float**, float**);
+template double SimUtil::dot(double**, double**);
