@@ -241,8 +241,16 @@ namespace SimUtil {
 	Args:
 	grid1 - the first vector (2D grid)
 	grid2 - the second vector (2D grid)
+	x/y - grid dimensions
 	*/
-	template <typename T> double dot(T**, T**);
+	template <typename T> double dot(T**, T**, int, int);
+	/*
+	Finds the maximum value in a grid.
+	Args:
+	grid1 - the grid to look in
+	x/y - grid dimensions
+	*/
+	template <typename T> T max(T**, int, int);
 }
 
 #endif //SIM_UTIL_H

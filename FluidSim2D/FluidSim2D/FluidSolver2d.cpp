@@ -54,8 +54,8 @@ void FluidSolver2D::init(std::string initialGeometryFile){
 	m_vSaved = initGrid2D<float>(m_gridWidth, m_gridHeight + 1);
 
 	// init vel grids with unknown label value
-	initVelGrid(m_u, m_gridWidth + 1, m_gridHeight, VEL_UNKNOWN);
-	initVelGrid(m_v, m_gridWidth, m_gridHeight + 1, VEL_UNKNOWN);
+	initGridValues<float>(m_u, m_gridWidth + 1, m_gridHeight, VEL_UNKNOWN);
+	initGridValues<float>(m_v, m_gridWidth, m_gridHeight + 1, VEL_UNKNOWN);
 	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
 	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
 
@@ -396,21 +396,23 @@ void FluidSolver2D::pressureSolve() {
 	// initialize all grids to solve for pressure
 	// using double for more accuracy
 	Mat2Dd rhs = initGrid2D<double>(m_gridWidth, m_gridHeight);
-	// TODO calc RHS
+	constructRHS(rhs);
 	Mat2Dd Adiag = initGrid2D<double>(m_gridWidth, m_gridHeight);
 	Mat2Dd Ax = initGrid2D<double>(m_gridWidth, m_gridHeight);
 	Mat2Dd Ay = initGrid2D<double>(m_gridWidth, m_gridHeight);
-	// TODO set up A
+	constructA(Adiag, Ax, Ay);
 	Mat2Dd precon = initGrid2D<double>(m_gridWidth, m_gridHeight);
-	// TODO construct preconditioner
+	constructPrecon(precon, Adiag, Ax, Ay);
 
-	// TODO run PCG
+	// solve for pressure using PCG
+	PCG(Adiag, Ax, Ay, rhs, precon);
 
 	// cleanup
 	deleteGrid2D<double>(m_gridWidth, m_gridHeight, rhs);
 	deleteGrid2D<double>(m_gridWidth, m_gridHeight, Adiag);
 	deleteGrid2D<double>(m_gridWidth, m_gridHeight, Ax);
 	deleteGrid2D<double>(m_gridWidth, m_gridHeight, Ay);
+	deleteGrid2D<double>(m_gridWidth, m_gridHeight, precon);
 }
 
 /*
@@ -533,7 +535,8 @@ grid - the grid to fill
 x/y - the dimensions of the grid
 value - the value to fill it with
 */
-void FluidSolver2D::initVelGrid(SimUtil::Mat2Df grid, int x, int y, float value) {
+template <typename T>
+void FluidSolver2D::initGridValues(T** grid, int x, int y, T value) {
 	for (int i = 0; i < x; i++) {
 		for (int j = 0; j < y; j++) {
 			grid[i][j] = value;
@@ -668,19 +671,78 @@ Args:
 rhs - the grid to use for the RHS
 */
 void FluidSolver2D::constructRHS(Mat2Dd rhs) {
-	// TODO
+	// initialize to 0
+	initGridValues<double>(rhs, m_gridWidth, m_gridHeight, 0.0);
+	// calculate negative divergence
+	double scale = 1.0f / m_dx;
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			if (isFluid(i, j)) {
+				rhs[i][j] = -scale * (m_u[i + 1][j] - m_u[i][j] + m_v[i][j + 1] - m_v[i][j]);
+				// if it's on boundary must update to consider solid velocity
+				// TODO create actual solid velocity grids, for right now just 0
+				if (m_label[i - 1][j] == SOLID) {
+					rhs[i][j] -= scale * (m_u[i][j] - 0.0f); //m_usolid[i][j]
+				}
+				if (m_label[i + 1][j] == SOLID) {
+					rhs[i][j] += scale * (m_u[i+1][j] - 0.0f); //m_usolid[i+1][j]
+				}
+				if (m_label[i][j - 1] == SOLID) {
+					rhs[i][j] -= scale * (m_v[i][j] - 0.0f); //m_vsolid[i][j]
+				}
+				if (m_label[i][j + 1] == SOLID) {
+					rhs[i][j] += scale * (m_v[i][j+1] - 0.0f); //m_vsolid[i][j+1]
+				}
+			}
+		}
+	}
 }
 
 /*
 Constructs the A matrix for the system to solve for pressure. This a sparse coefficient matrix
-for the pressure terms, stored in 3 separate grids.
+for the pressure terms, stored in 3 separate grids. If index i, j, k is not a fluid cell, then
+it is 0.0 in all 3 grids that store the matix. 
 Args:
 Adiag - grid to store the diagonal of the matrix in.
 Ax - grid to store the coefficients for pressure in the (i+1) cell for each grid cell with x index i
 Ay - grid to store the coefficients for pressure in the (j+1) cell for each grid cell with y index j
 */
 void FluidSolver2D::constructA(Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
-	// TODO
+	// clear to all zeros so can increment
+	initGridValues<double>(Adiag, m_gridWidth, m_gridHeight, 0.0);
+	initGridValues<double>(Ax, m_gridWidth, m_gridHeight, 0.0);
+	initGridValues<double>(Ay, m_gridWidth, m_gridHeight, 0.0);
+
+	// populate with coefficients for pressure unknowns
+	double scale = m_dt / (FLUID_DENSITY * m_dx * m_dx);
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			if (isFluid(i, j)) {
+				// handle negative x neighbor
+				if (m_label[i - 1][j] == FLUID) {
+					Adiag[i][j] += scale;
+				}
+				// handle positive x neighbor
+				if (m_label[i + 1][j] == FLUID) {
+					Adiag[i][j] += scale;
+					Ax[i][j] = -scale;
+				} else if (m_label[i + 1][j] == AIR) {
+					Adiag[i][j] += scale;
+				}
+				// handle negative y neighbor
+				if (m_label[i][j - 1] == FLUID) {
+					Adiag[i][j] += scale;
+				}
+				// handle positive y neighbor
+				if (m_label[i][j + 1] == FLUID) {
+					Adiag[i][j] += scale;
+					Ay[i][j] = -scale;
+				} else if (m_label[i][j + 1] == AIR) {
+					Adiag[i][j] += scale;
+				}
+			}
+		}
+	}
 }
 
 /*
@@ -691,7 +753,53 @@ precon - grid to store the preconditioner in
 Adiag, Ax, Ay - the grids that make up the A coefficient matrix
 */
 void FluidSolver2D::constructPrecon(Mat2Dd precon, Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
-	// TODO
+	// tuning constant
+	double tau = 0.97;
+	// safety constant
+	double sigma = 0.25;
+
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			if (isFluid(i, j)) {
+				double Adiag_ij = Adiag[i][j];
+				double Ax_im1j = 0.0;
+				double Ax_ijm1 = 0.0;
+				double Ay_ijm1 = 0.0;
+				double Ay_im1j = 0.0;
+				double precon_im1j = 0.0;
+				double precon_ijm1 = 0.0;
+				// want to stay at zero if off the grid
+				// non-fluid entries in A are already 0
+				if (i - 1 >= 0 && i - 1 < m_gridWidth) {
+					if (isFluid(i - 1, j)) {
+						Ax_im1j = Ax[i - 1][j];
+						Ay_im1j = Ay[i - 1][j];
+						precon_im1j = precon[i - 1][j];
+					}
+				}
+				if (j - 1 >= 0 && j - 1 < m_gridHeight) {
+					if (isFluid(i, j - 1)) {
+						Ax_ijm1 = Ax[i][j - 1];
+						Ay_ijm1 = Ay[i][j - 1];
+						precon_ijm1 = precon[i][j - 1];
+					}
+				}
+
+				double e = Adiag_ij - pow(Ax_im1j * precon_im1j, 2.0)
+							- pow(Ay_ijm1 * precon_ijm1, 2.0)
+							- tau * (
+								Ax_im1j * Ay_im1j * pow(precon_im1j, 2.0)
+								+ Ay_ijm1 * Ax_ijm1 * pow(precon_ijm1, 2.0)
+								);
+
+				if (e < (sigma * Adiag_ij)) {
+					e = Adiag_ij;
+				}
+
+				precon[i][j] = 1.0 / sqrt(e);
+			}
+		}
+	}
 }
 
 /*
@@ -704,7 +812,63 @@ b - the right hand side of the equation
 precon - the preconditioner to use
 */
 void FluidSolver2D::PCG(Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay, Mat2Dd b, Mat2Dd precon) {
-	// TODO
+	// reset pressure vec to 0
+	initGridValues<float>(m_p, m_gridWidth, m_gridHeight, 0.0f);
+	// residiual vector is b to start
+	Mat2Dd r = initGrid2D<double>(m_gridWidth, m_gridHeight);
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			r[i][j] = b[i][j];
+		}
+	}
+
+	// auxiliary vector
+	Mat2Dd z = initGrid2D<double>(m_gridWidth, m_gridHeight);
+	// search vector
+	Mat2Dd s = initGrid2D<double>(m_gridWidth, m_gridHeight);
+
+	// initialize auxiliary and search
+	applyPrecon(z, r, precon, Adiag, Ax, Ay);
+	// search is set to auxiliary to start
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			s[i][j] = z[i][j];
+		}
+	}
+
+	double sigma = dot(z, r, m_gridWidth, m_gridHeight);
+
+	// start the main iteration until tolerance is reach or max out iterations
+	for (int iters = 0; iters < PCG_MAX_ITERS; iters++) {
+		applyA(z, s, Adiag, Ax, Ay);
+		double alpha = sigma / dot(z, s, m_gridWidth, m_gridHeight);
+		// update pressure and residual
+		for (int i = 0; i < m_gridWidth; i++) {
+			for (int j = 0; j < m_gridHeight; j++) {
+				m_p[i][j] += (alpha * s[i][j]);
+				r[i][j] -= (alpha * z[i][j]);
+			}
+		}
+		// check if we're under the tolerance
+		if (max(r, m_gridWidth, m_gridHeight) <= PCG_TOL) {
+			std::cout << "PCG converged after " << iters << " iterations.\n";
+			return;
+		}
+		// otherwise new auxiliary vector
+		applyPrecon(z, r, precon, Adiag, Ax, Ay);
+		double newSigma = dot(z, r, m_gridWidth, m_gridHeight);
+		double beta = newSigma / sigma;
+		// update search vector
+		for (int i = 0; i < m_gridWidth; i++) {
+			for (int j = 0; j < m_gridHeight; j++) {
+				s[i][j] = z[i][j] + (beta * s[i][j]);
+			}
+		}
+		// update sigma
+		sigma = newSigma;
+	}
+
+	std::cout << "PCG did not converge, stopped after " << PCG_MAX_ITERS << " iterations.\n";
 }
 
 /*
@@ -716,7 +880,71 @@ precon - the preconditioner
 Adiag, Ax, Ay - the grids that make up the coefficient matrix
 */
 void FluidSolver2D::applyPrecon(Mat2Dd z, Mat2Dd r, Mat2Dd precon, Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
-	// TODO
+	// first solve Lq = r
+	Mat2Dd q = initGrid2D<double>(m_gridWidth, m_gridHeight);
+	initGridValues<double>(q, m_gridWidth, m_gridHeight, 0.0);
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			if (isFluid(i, j)) {
+				double Ax_im1j = 0.0;
+				double Ay_ijm1 = 0.0;
+				double precon_im1j = 0.0;
+				double precon_ijm1 = 0.0;
+				double q_im1j = 0.0;
+				double q_ijm1 = 0.0;
+
+				if (i - 1 >= 0 && i - 1 < m_gridWidth) {
+					if (isFluid(i - 1, j)) {
+						Ax_im1j = Ax[i - 1][j];
+						precon_im1j = precon[i - 1][j];
+						q_im1j = q[i - 1][j];
+					}
+				}
+				if (j - 1 >= 0 && j - 1 < m_gridHeight) {
+					if (isFluid(i, j - 1)) {
+						Ay_ijm1 = Ay[i][j - 1];
+						precon_ijm1 = precon[i][j - 1];
+						q_ijm1 = q[i][j - 1];
+					}
+				}
+
+				double t = r[i][j] - (Ax_im1j * precon_im1j * q_im1j)
+								   - (Ay_ijm1 * precon_ijm1 * q_ijm1);
+
+				q[i][j] = t * precon[i][j];
+			}
+		}
+	}
+
+	// now solve L^T z = q
+	initGridValues<double>(z, m_gridWidth, m_gridHeight, 0.0);
+	for (int i = m_gridWidth - 1; i >= 0; i--) {
+		for (int j = m_gridHeight; j >= 0; j--) {
+			if (isFluid(i, j)) {
+				double Ax_ij = Ax[i][j];
+				double Ay_ij = Ay[i][j];
+				double precon_ij = precon[i][j];
+				double z_ip1j = 0.0;
+				double z_ijp1 = 0.0;
+
+				if (i + 1 >= 0 && i + 1 < m_gridWidth) {
+					if (isFluid(i + 1, j)) {
+						z_ip1j = z[i + 1][j];
+					}
+				}
+				if (j + 1 >= 0 && j + 1 < m_gridHeight) {
+					if (isFluid(i, j + 1)) {
+						z_ijp1 = z[i][j + 1];
+					}
+				}
+
+				double t = q[i][j] - (Ax_ij * precon_ij * z_ip1j)
+								   - (Ay_ij * precon_ij * z_ijp1);
+
+				z[i][j] = t * precon_ij;
+			}
+		}
+	}
 }
 
 /*
@@ -727,7 +955,22 @@ s - the vector (2D grid) to multiply A by
 Adiag, Ax, Ay - the grids that make up the coefficient matrix A
 */
 void FluidSolver2D::applyA(Mat2Dd z, Mat2Dd s, Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
-	// TODO
+	initGridValues<double>(z, m_gridWidth, m_gridHeight, 0.0);
+	for (int i = 0; i < m_gridWidth; i++) {
+		for (int j = 0; j < m_gridHeight; j++) {
+			if (isFluid(i, j)) {
+				z[i][j] = Adiag[i][j] * s[i][j]
+					+ Ax[i][j] * s[i + 1][j]
+					+ Ay[i][j] * s[i][j + 1];
+				if (i - 1 >= 0 && i - 1 < m_gridWidth) {
+					z[i][j] += Ax[i - 1][j] * s[i - 1][j];
+				}
+				if (j - 1 >= 0 && j - 1 < m_gridHeight) {
+					z[i][j] += Ay[i][j - 1] * s[i][j - 1];
+				}
+			}
+		}
+	}
 }
 
 

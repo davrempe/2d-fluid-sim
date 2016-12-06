@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <limits>
 
 namespace SimUtil {
 
@@ -162,9 +163,29 @@ namespace SimUtil {
 	}
 
 	template <typename T>
-	double dot(T** grid1, T** grid2) {
-		// TODO
-		return 0.0;
+	double dot(T** grid1, T** grid2, int x, int y) {
+		double dotProd = 0.0;
+		for (int i = 0; i < x; i++) {
+			for (int j = 0; j < y; j++) {
+				dotProd += grid1[i][j] * grid2[i][j];
+			}
+		}
+
+		return dotProd;
+	}
+
+	template <typename T>
+	T max(T** grid1, int x, int y) {
+		T maxVal = std::numeric_limits<T>::lowest();
+		for (int i = 0; i < x; i++) {
+			for (int j = 0; j < y; j++) {
+				if (grid1[i][j] > maxVal) {
+					maxVal = grid1[i][j];
+				}
+			}
+		}
+
+		return maxVal;
 	}
 
 }
@@ -186,6 +207,7 @@ template void SimUtil::deleteGrid2D<float>(int, int, float**);
 template void SimUtil::deleteGrid2D<double>(int, int, double**);
 template void SimUtil::printGrid2D<int>(int, int, int**);
 template void SimUtil::printGrid2D<float>(int, int, float**);
+template void SimUtil::printGrid2D<double>(int, int, double**);
 template int*** SimUtil::initMat3D<int>(int, int, int);
 template float*** SimUtil::initMat3D<float>(int, int, int);
 template double*** SimUtil::initMat3D<double>(int, int, int);
@@ -199,6 +221,10 @@ template void SimUtil::deleteGrid3D<int>(int, int, int, int***);
 template void SimUtil::deleteGrid3D<float>(int, int, int, float***);
 template void SimUtil::deleteGrid3D<double>(int, int, int, double***);
 
-template double SimUtil::dot(int**, int**);
-template double SimUtil::dot(float**, float**);
-template double SimUtil::dot(double**, double**);
+template double SimUtil::dot(int**, int**, int, int);
+template double SimUtil::dot(float**, float**, int, int);
+template double SimUtil::dot(double**, double**, int, int);
+
+template int SimUtil::max(int**, int, int);
+template float SimUtil::max(float**, int, int);
+template double SimUtil::max(double**, int, int);

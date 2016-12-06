@@ -24,10 +24,12 @@ private:
 	float m_dx;
 	// grid of cell labels, size (nx, ny)
 	SimUtil::Mat2Di m_label;
+
 	// pressure and velocity are held in a MAC grid so that
 	// p(i, j, k) = p_i_j_k
 	// u(i, j, k) = u_i-1/2_j_k
 	// v(i, j, k) = v_i_j-1/2_k
+
 	// grid of pressures, size (nx, ny)
 	SimUtil::Mat2Df m_p;
 	// grid of vel x component, size (nx+1, ny)
@@ -57,6 +59,11 @@ private:
 	const SimUtil::Vec2 GRAVITY = { 0.0f, -9.81f };
 	// density of the fluid (kg/m^3)
 	const float FLUID_DENSITY = 1000;
+	// error tolerance for PCG
+	const float PCG_TOL = 0.000001;
+	// max iterations for PCG
+	const float PCG_MAX_ITERS = 200;
+
 	// simulation time step
 	float m_dt;
 
@@ -86,7 +93,7 @@ private:
 	void cleanupParticles(float);
 
 	// helper functions
-	void initVelGrid(SimUtil::Mat2Df, int, int, float);
+	template <typename T> void initGridValues(T**, int, int, T);
 	double trilinearHatKernel(SimUtil::Vec2);
 	double hatFunction(double);
 	double quadBSplineKernel(SimUtil::Vec2);
