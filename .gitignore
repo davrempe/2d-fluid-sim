@@ -4,6 +4,10 @@ FluidSim2D/Debug/*
 FluidSim2D/FluidSim2D/Debug/*
 FluidSim2D/.vs/*
 FluidSim2D/FluidSim2D/particle_data.csv
+FluidSim2D/x64/*
+FluidSim2D/FluidSim2D/x64/*
+FluidSim2D/Release/*
+FluidSim2D/FluidSim2D/Release/*
 
 # Compiled Object files
 *.slo

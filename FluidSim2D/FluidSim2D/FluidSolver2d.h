@@ -52,17 +52,17 @@ private:
 	// number of particles to seed in each cell at start of sim
 	const int PARTICLES_PER_CELL = 4;
 	// the amount of weight to give to PIC in PIC/FLIP update
-	const float PIC_WEIGHT = 0.2;
+	const float PIC_WEIGHT = 0.018f;
 	// the maximum number of grid cells a particle should move when advected
 	const int ADVECT_MAX = 1;
 	// acceleration due to gravity
 	const SimUtil::Vec2 GRAVITY = { 0.0f, -9.81f };
 	// density of the fluid (kg/m^3)
-	const float FLUID_DENSITY = 1000;
+	const float FLUID_DENSITY = 1000.0f;
 	// error tolerance for PCG
-	const float PCG_TOL = 0.000001;
+	const float PCG_TOL = 0.000001f;
 	// max iterations for PCG
-	const float PCG_MAX_ITERS = 200;
+	const int PCG_MAX_ITERS = 200;
 
 	// simulation time step
 	float m_dt;
@@ -98,7 +98,7 @@ private:
 	double hatFunction(double);
 	double quadBSplineKernel(SimUtil::Vec2);
 	bool isFluid(int, int);
-	bool checkNeighbors(SimUtil::Mat2Di, int[2], int[2], int[][2], int, int);
+	std::vector<int> checkNeighbors(SimUtil::Mat2Di, int[2], int[2], int[][2], int, int);
 	SimUtil::Vec2 interpVel(SimUtil::Mat2Df, SimUtil::Mat2Df, SimUtil::Vec2);
 	void RK3(SimUtil::Particle2D*, SimUtil::Vec2, float, SimUtil::Mat2Df, SimUtil::Mat2Df);
 	void constructRHS(SimUtil::Mat2Dd);
@@ -107,6 +107,7 @@ private:
 	void PCG(SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd);
 	void applyPrecon(SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd);
 	void applyA(SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd, SimUtil::Mat2Dd);
+	bool projectParticle(SimUtil::Particle2D *, float);
 
 public:
 	/*

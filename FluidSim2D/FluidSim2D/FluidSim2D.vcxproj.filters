@@ -64,6 +64,12 @@
     <Text Include="initial_geometry.txt">
       <Filter>Resource Files</Filter>
     </Text>
+    <Text Include="initial_geom2.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+    <Text Include="init_geom3.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FluidSim2D.rc">
