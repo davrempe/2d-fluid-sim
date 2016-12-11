@@ -52,7 +52,7 @@ private:
 	// number of particles to seed in each cell at start of sim
 	const int PARTICLES_PER_CELL = 4;
 	// the amount of weight to give to PIC in PIC/FLIP update
-	const float PIC_WEIGHT = 0.018f;
+	const float PIC_WEIGHT = 0.02f;
 	// the maximum number of grid cells a particle should move when advected
 	const int ADVECT_MAX = 1;
 	// acceleration due to gravity

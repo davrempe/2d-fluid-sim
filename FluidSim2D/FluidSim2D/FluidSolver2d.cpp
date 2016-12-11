@@ -92,11 +92,14 @@ void FluidSolver2D::step() {
 	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight, m_p);
 	// apply pressure force
 	applyPressure();
+	if (DEBUG) printGrid2D<float>(m_gridWidth + 1, m_gridHeight, m_u);
+	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
+	// TODO is grid getting cleared before this?
 	// transfer grid velocities back to particles
 	gridToParticles(PIC_WEIGHT);
 	// advect particles
-	extrapolateGridFluidData(m_u, m_gridWidth + 1, m_gridHeight, 100);
-	extrapolateGridFluidData(m_v, m_gridWidth, m_gridHeight + 1, 50);
+	extrapolateGridFluidData(m_u, m_gridWidth + 1, m_gridHeight, m_gridWidth);
+	extrapolateGridFluidData(m_v, m_gridWidth, m_gridHeight + 1, m_gridHeight);
 	advectParticles(ADVECT_MAX);
 	// detect particles that have penetrated solid boundary and move back inside fluid
 	cleanupParticles(m_dx / 4.0f);
@@ -147,9 +150,9 @@ void FluidSolver2D::seedParticles(int particlesPerCell, std::vector<Particle2D> 
 				// cycle through subgrid to place all particles
 				for (int k = 0; k < particlesPerCell; k++) {
 					// randomly jitter from subgrid center
-					// give a random factor from [-0.25, 0.25] multiplied by dx
-					float jitterX = ((float)((rand() % 51) - 25) / 100.0f) * m_dx;
-					float jitterY = ((float)((rand() % 51) - 25) / 100.0f) * m_dx;
+					// give a random factor from [-0.24, 0.24] multiplied by dx
+					float jitterX = ((float)((rand() % 49) - 24) / 100.0f) * m_dx;
+					float jitterY = ((float)((rand() % 49) - 24) / 100.0f) * m_dx;
 					Vec2 pos(subCenters[i % 4].x + jitterX, subCenters[i % 4].y + jitterY);
 					Vec2 vel(0.0f, 0.0f);
 					particleList->push_back(Particle2D(pos, vel));
@@ -219,7 +222,6 @@ void FluidSolver2D::particlesToGrid() {
 		Particle2D curParticle = m_particles->at(p);
 		for (int i = 0; i < m_gridWidth + 1; i++) {
 			for (int j = 0; j < m_gridHeight + 1; j++) {
-				if (isFluid(i, j)) {
 					if (j < m_gridHeight) {
 						double kernel = trilinearHatKernel(sub(curParticle.pos, getGridCellPosition(i - 0.5f, j, m_dx)));
 						uNum[i][j] += curParticle.vel.x * kernel;
@@ -230,22 +232,28 @@ void FluidSolver2D::particlesToGrid() {
 						vNum[i][j] += curParticle.vel.y * kernel;
 						vDen[i][j] += kernel;
 					}
-				}
 			}
 		}
 	}
 
+	if (DEBUG) printGrid2D<double>(m_gridWidth + 1, m_gridHeight, uNum);
+	if (DEBUG) printGrid2D<double>(m_gridWidth + 1, m_gridHeight, uDen);
+	if (DEBUG) printGrid2D<double>(m_gridWidth, m_gridHeight + 1, vNum);
+	if (DEBUG) printGrid2D<double>(m_gridWidth, m_gridHeight + 1, vDen);
+
 	// additional pass over grid to divide and update actual velocities
 	for (int i = 0; i < m_gridWidth + 1; i++) {
 		for (int j = 0; j < m_gridHeight + 1; j++) {
-			if (isFluid(i, j)) {
 				if (j < m_gridHeight) {
-					m_u[i][j] = uNum[i][j] / uDen[i][j];
+					if (uDen[i][j] != 0.0) {
+						m_u[i][j] = uNum[i][j] / uDen[i][j];
+					}
 				}
 				if (i < m_gridWidth) {
-					m_v[i][j] = vNum[i][j] / vDen[i][j];
+					if (vDen[i][j] != 0.0) {
+						m_v[i][j] = vNum[i][j] / vDen[i][j];
+					}
 				}
-			}
 		}
 	}
 
@@ -269,7 +277,7 @@ void FluidSolver2D::extrapolateGridFluidData(Mat2Df grid, int x, int y, int dept
 	// set d to 0 for known values, max int for unknown
 	for (int i = 0; i < x; i++) {
 		for (int j = 0; j < y; j++) {
-			if (isFluid(i, j)) {
+			if (grid[i][j] != VEL_UNKNOWN) {
 				d[i][j] = 0;
 			} else {
 				d[i][j] = INT_MAX;
@@ -408,12 +416,17 @@ void FluidSolver2D::pressureSolve() {
 	// using double for more accuracy
 	Mat2Dd rhs = initGrid2D<double>(m_gridWidth, m_gridHeight);
 	constructRHS(rhs);
+	if (DEBUG) printGrid2D<double>(m_gridWidth, m_gridHeight, rhs);
 	Mat2Dd Adiag = initGrid2D<double>(m_gridWidth, m_gridHeight);
 	Mat2Dd Ax = initGrid2D<double>(m_gridWidth, m_gridHeight);
 	Mat2Dd Ay = initGrid2D<double>(m_gridWidth, m_gridHeight);
 	constructA(Adiag, Ax, Ay);
+	if (DEBUG) printGrid2D<double>(m_gridWidth, m_gridHeight, Adiag);
+	if (DEBUG) printGrid2D<double>(m_gridWidth, m_gridHeight, Ax);
+	if (DEBUG) printGrid2D<double>(m_gridWidth, m_gridHeight, Ay);
 	Mat2Dd precon = initGrid2D<double>(m_gridWidth, m_gridHeight);
 	constructPrecon(precon, Adiag, Ax, Ay);
+	if (DEBUG) printGrid2D<double>(m_gridWidth, m_gridHeight, precon);
 
 	// solve for pressure using PCG
 	PCG(Adiag, Ax, Ay, rhs, precon);
@@ -500,7 +513,7 @@ void FluidSolver2D::gridToParticles(float alpha) {
 		Vec2 picInterp = interpVel(m_u, m_v, curParticle->pos);
 		Vec2 flipInterp = interpVel(duGrid, dvGrid, curParticle->pos);
 		// u_new = alpha * interp(u_gridNew, x_p) + (1 - alpha) * (u_pOld + interp(u_dGrid, x_p))
-		curParticle->vel = add(scale(picInterp, alpha), scale(add(curParticle->vel, flipInterp), 1 - alpha));
+		curParticle->vel = add(scale(picInterp, alpha), scale(add(curParticle->vel, flipInterp), 1.0f - alpha));
 	}
 
 	deleteGrid2D<float>(m_gridWidth + 1, m_gridHeight, duGrid);
@@ -569,14 +582,15 @@ void FluidSolver2D::cleanupParticles(float dx) {
 	int numDeleted = 0;
 	while(!finished && m_particles->size() > 0) {
 		int *cell = getGridCellIndex(m_particles->at(i).pos, m_dx);
+		int ind[2] = { cell[0], cell[1] };
 		// if either of cells are negative or greater than sim dimensions it has left sim area
-		if (cell[0] < 0 || cell[1] < 0 || cell[0] >= m_gridWidth || cell[1] >= m_gridHeight || isnan(m_particles->at(i).pos.x) || isnan(m_particles->at(i).pos.y)) {
+		if (ind[0] < 0 || ind[1] < 0 || ind[0] >= m_gridWidth || ind[1] >= m_gridHeight || isnan(m_particles->at(i).pos.x) || isnan(m_particles->at(i).pos.y)) {
 			m_particles->erase(m_particles->begin() + i);
 			numDeleted++;
 			if (i >= m_particles->size()) {
 				finished = true;
 			}
-		} else if (m_label[cell[0]][cell[1]] == SOLID) {
+		} else if (m_label[ind[0]][ind[1]] == SOLID) {
 			// project back into fluid
 			bool success = projectParticle(&(m_particles->at(i)), dx);
 			if (!success) {
@@ -595,7 +609,7 @@ void FluidSolver2D::cleanupParticles(float dx) {
 		}
 	}
 
-	std::cout << "Removed " << numDeleted << " particles from sim.\n";
+	if (DEBUG) std::cout << "Removed " << numDeleted << " particles from sim.\n";
 }
 
 
@@ -664,8 +678,8 @@ Calculates the value of hat function for the given r.
 */
 double FluidSolver2D::hatFunction(double r) {
 	double rAbs = abs(r);
-	if (r <= 1) {
-		return 1.0 - r;
+	if (rAbs <= 1) {
+		return 1.0 - rAbs;
 	} else {
 		return 0.0;
 	}
@@ -796,7 +810,7 @@ void FluidSolver2D::constructA(Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
 		for (int j = 0; j < m_gridHeight; j++) {
 			if (isFluid(i, j)) {
 				// handle negative x neighbor
-				if (m_label[i - 1][j] == FLUID) {
+				if (m_label[i - 1][j] == FLUID || m_label[i - 1][j] == AIR) {
 					Adiag[i][j] += scale;
 				}
 				// handle positive x neighbor
@@ -807,7 +821,7 @@ void FluidSolver2D::constructA(Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
 					Adiag[i][j] += scale;
 				}
 				// handle negative y neighbor
-				if (m_label[i][j - 1] == FLUID) {
+				if (m_label[i][j - 1] == FLUID || m_label[i][j - 1] == AIR) {
 					Adiag[i][j] += scale;
 				}
 				// handle positive y neighbor
@@ -830,6 +844,8 @@ precon - grid to store the preconditioner in
 Adiag, Ax, Ay - the grids that make up the A coefficient matrix
 */
 void FluidSolver2D::constructPrecon(Mat2Dd precon, Mat2Dd Adiag, Mat2Dd Ax, Mat2Dd Ay) {
+	initGridValues<double>(precon, m_gridWidth, m_gridHeight, 0.0);
+
 	// tuning constant
 	double tau = 0.97;
 	// safety constant

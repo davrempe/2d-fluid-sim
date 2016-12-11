@@ -70,6 +70,9 @@
     <Text Include="init_geom3.txt">
       <Filter>Resource Files</Filter>
     </Text>
+    <Text Include="init_geom4.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FluidSim2D.rc">

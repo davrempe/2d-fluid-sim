@@ -41,11 +41,11 @@ const float TIME_STEP = 0.01f;
 //----------------------------------------------------------------------
 
 // input file for initial system state - grid marked solid, fluid, or air
-const std::string INITIAL_GEOMETRY_FILE_IN = "init_geom3.txt";
+const std::string INITIAL_GEOMETRY_FILE_IN = "initial_geom2.txt";
 // output file for particle data
 const std::string PARTICLE_DATA_FILE_OUT = "particle_data.csv";
 // the number of frames to simulate
-const int NUM_SIM_FRAMES = 125;
+const int NUM_SIM_FRAMES = 100;
 // frame rate for render (fps)
 const float FRAME_RATE = 25.0f;
 // time step between outputted frames
