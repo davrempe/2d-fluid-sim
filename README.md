@@ -6,6 +6,7 @@ This is my first implementation of a full fluid solver. Multiple video demos of 
 # To Run
 * The easiest way is to simply open the Visual Studio solution and run. This uses the nupengl package installed through VS.  
     * I've done all development and testing on Windows 10 with Visual Studio Community 2015, I haven't tested any other set-ups.
+    * If you run into issues getting GLM to link properly, see [this Stack Overflow answer](http://stackoverflow.com/a/17912620). 
 * If you don't have Visual Studio, make sure to have GLUT, GLEW, and GLM properly set up.
 
 The simulation can be parameterized by setting variables in both `FluidSim2dMain.cpp` and `FluidSolver2d.h`. In `FluidSim2dMain.cpp` this includes MAC grid width and height (100 x 50 by default), grid cell width (0.005 m), time step size (0.01 s), input geometry, number of frames to simulate, and frame rate. In `FluidSolver2d.h` you can set the parameters for main algorithms used in the simulation like number of particles to seed per fluid cell, PIC/FLIP blending weight, CFL condition for advection, gravity, fluid density, PCG tolerance, and PCG max iterations. 
