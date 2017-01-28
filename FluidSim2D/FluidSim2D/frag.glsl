@@ -1,3 +1,4 @@
+#version 440
 
 in vec3 fColor;
 

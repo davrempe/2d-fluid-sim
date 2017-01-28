@@ -1,3 +1,4 @@
+#version 440
 
 in vec2 vPos;
 in vec3 vColor;
