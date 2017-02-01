@@ -156,7 +156,7 @@ namespace SimUtil {
 	geomFile - the file containing the geometry
 	grid - the 2D array to put the initial grid in
 	*/
-	void readInGeom(int, int, std::string, SimUtil::Mat2Di);
+	void readInGeom2D(int, int, std::string, SimUtil::Mat2Di);
 
 	/*
 	Finds the physical location of the cell with index [x][y]

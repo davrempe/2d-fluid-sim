@@ -61,7 +61,7 @@ void FluidSolver2D::init(std::string initialGeometryFile){
 	if (DEBUG) printGrid2D<float>(m_gridWidth, m_gridHeight + 1, m_v);
 
 	// read in initial geometry to populate label grid
-	readInGeom(m_gridWidth, m_gridHeight, initialGeometryFile, m_label);
+	readInGeom2D(m_gridWidth, m_gridHeight, initialGeometryFile, m_label);
 	if (DEBUG) printGrid2D<int>(m_gridWidth, m_gridHeight, m_label);
 
 	// seed particles using label grid

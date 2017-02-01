@@ -42,7 +42,7 @@ void FluidRenderer2D::init(int argc, char** argv) {
 	readInParticleData();
 	// read in geometry data
 	m_geomGrid = SimUtil::initGrid2D<int>(m_width, m_height);
-	SimUtil::readInGeom(m_width, m_height, m_geomFile, m_geomGrid);
+	SimUtil::readInGeom2D(m_width, m_height, m_geomFile, m_geomGrid);
 
 	// set up glut and glew
 	glutInit(&argc, argv);

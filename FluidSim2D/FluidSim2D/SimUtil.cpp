@@ -94,7 +94,7 @@ namespace SimUtil {
 		deleteMat3D<T>(x, y, z, grid);
 	}
 
-	void readInGeom(int x, int y, std::string geomFileName, Mat2Di grid) {
+	void readInGeom2D(int x, int y, std::string geomFileName, Mat2Di grid) {
 		// open the geometry file
 		std::ifstream geomFile(geomFileName);
 		if (geomFile.is_open()) {
