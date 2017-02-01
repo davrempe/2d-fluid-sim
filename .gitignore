@@ -8,6 +8,7 @@ FluidSim2D/x64/*
 FluidSim2D/FluidSim2D/x64/*
 FluidSim2D/Release/*
 FluidSim2D/FluidSim2D/Release/*
+FluidSim2D/packages/*
 
 # Compiled Object files
 *.slo
